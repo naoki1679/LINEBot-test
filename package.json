@@ -1,0 +1,19 @@
+{
+  "name": "typescript-node",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node --enable-source-maps --env-file=.env build/index.js",
+    "start-ngrok": "ngrok http 21153"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.10.4",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^10.5.0",
+    "express": "^5.2.1"
+  }
+}
