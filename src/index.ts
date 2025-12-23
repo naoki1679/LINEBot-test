@@ -6,7 +6,7 @@ import { env } from "process";
 // ★楽曲データを別ファイルから読み込む
 import { songs } from "./songs";
 // ★ルールを別ファイルから読み込む
-import { rules, orderRules } from "./rules";
+import { gameRules, orderRules } from "./rules";
 
 const { MessagingApiClient } = line.messagingApi;
 
@@ -683,13 +683,13 @@ async function handleEvent(
   // --- 遊び方の決定 ---
   if (text === "③遊び方の提案") {
     // 1. ルール名（キー）の配列を取得
-    const ruleKeys = Object.keys(rules);
+    const ruleKeys = Object.keys(gameRules);
     
     // 2. ルール名をランダムに1つ選択
     const randomRuleTitle = ruleKeys[Math.floor(Math.random() * ruleKeys.length)];
     
     // 3. そのルール名に対応する説明文を取得
-    const ruleDescription = rules[randomRuleTitle];
+    const ruleDescription = gameRules[randomRuleTitle];
 
     await client.replyMessage({
       replyToken: event.replyToken,
