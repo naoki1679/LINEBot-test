@@ -1,365 +1,672 @@
 import * as line from "@line/bot-sdk";
-import assert from "assert";
 import express from "express";
 import http from "node:http";
+import assert from "assert";
 import { env } from "process";
-
-/**
- * グループに入った時に送られる挨拶
- */
-const GREETING =
-  '参加ありがとう！はじめるときは「カラキン」って送ってね（やめるときは「カラキンばいばい」）';
-
-type Reply = line.messagingApi.Message | line.messagingApi.Message[];
-
-// ===== MVP: RoomIdなし（グローバル1進行） =====
-
-// 「何番目のPhaseか」＋「Phase内で何を待っているか」だけを状態として持つ
-type Step = "IDLE" | "AWAIT_ACK" | "AWAIT_CHOOSE" | "AWAIT_FINISH" | "ENDED";
-
-let step: Step = "IDLE";
-let phaseIndex = 0;        // phases の何番目を処理中か
-let moreCounts: number[] = []; // phases[i] に対する「他の曲」回数
-
-function ensureMoreCountsSize(n: number) {
-  while (moreCounts.length < n) moreCounts.push(0);
-}
-
-function resetFlow() {
-  step = "IDLE";
-  phaseIndex = 0;
-  moreCounts = [];
-}
-
-function normalize(raw: string): string {
-  return raw
-    .trim()
-    .replace(/\s+/g, "")
-    .replace(/[！!]+/g, "!")
-    .replace(/[。．.]+/g, "")
-    .toLowerCase();
-}
-
-type Intent = "START" | "ACK" | "DECIDED" | "MORE" | "FINISHED" | "EXIT" | "UNKNOWN";
-
-function detectIntent(message: string): Intent {
-  const m = normalize(message);
-
-  if (m === "カラキン" || m === "からきん") return "START";
-  if (m === "カラキンばいばい" || m === "からきんばいばい") return "EXIT";
-
-  if (m === "わかった" || m === "了解" || m === "りょうかい" || m === "ok") return "ACK";
-
-  if (m === "決まった" || m === "決まった!") return "DECIDED";
-
-  if (
-    m === "他の曲を教えて" ||
-    m === "ほかの曲を教えて" ||
-    m === "他の曲" ||
-    m === "ほかの曲"
-  )
-    return "MORE";
-
-  if (m === "おわった" || m === "終わった" || m === "終了" || m === "しゅうりょう")
-    return "FINISHED";
-
-  return "UNKNOWN";
-}
-
-// ===== Phase定義（ここを配列で増やしていく） =====
-
-type Phase = {
-  // ルール本文（あなたが編集する想定）
-  descriptionLines: string[];
-
-  // 順番/ペアなど（任意）
-  orderLines?: string[];
-
-  // 最後に出す促し文（任意に編集）
-  choosePrompt: string;
-
-  // 「他の曲」ローテ用候補プール
-  songPools: string[][];
-};
-
-const phases: Phase[] = [
-  {
-    descriptionLines: [
-      "最初は、、、",
-      "みんなで1曲歌おう！",
-      "",
-      "この3曲の中から歌う曲をえらんでね",
-    ],
-    choosePrompt: "曲は決まったかな？\n「決まった！」「他の曲を教えて」",
-    songPools: [
-      ["キセキ", "新宝島", "さくらんぼ"],
-      ["小さな恋のうた", "前前前世", "残酷な天使のテーゼ"],
-    ],
-  },
-  {
-    descriptionLines: [
-      "いい歌いっぱいだったね！",
-      "",
-      "次は、、、",
-      "それぞれ1曲ずつ歌おう！",
-      "",
-      "「点数勝負（小数点以下）」をしよう。",
-      "採点の点数で小数点以下の数字が大きいほうが勝ちだよ",
-      "たとえば、87.621 と 89.199 だったら、87.621 の勝ちだよ！",
-    ],
-    // 順番は必要ならここに書く（任意）
-    // orderLines: ["1 おのちゃん", "2 てつお", "3 りょうせい"],
-    choosePrompt: "曲は決まったかな？\n「決まった！」「他の曲を教えて」",
-    songPools: [
-      ["シンデレラボーイ", "ライラック", "怪獣の花唄"],
-      ["怪獣のはなうた", "Lemon", "マリーゴールド"],
-      ["睡蓮花", "マツケンサンバ", "アンパンマンマーチ"],
-    ],
-  },
-  {
-    descriptionLines: [
-      "いい歌いっぱいだったね！",
-      "",
-      "次は、、、",
-      "ペアを組んで1曲ずつ歌おう！",
-    ],
-    // ペアや順番（任意）
-    orderLines: ["① A＆B", "② C＆D"],
-    choosePrompt: "曲は決まったかな？\n「決まった！」「他の曲を教えて」",
-    songPools: [
-      ["シンデレラボーイ", "ライラック", "怪獣の花唄"],
-      ["さよならエレジー", "チェリー", "世界が終るまでは…"],
-    ],
-  },
-];
-
-// ===== 文言テンプレ =====
-// ボタン生成関数
-function renderSongButtons(question: string, songs: string[]): line.messagingApi.TemplateMessage {
-  const actions = songs.slice(0, 4).map((s) => ({
-    type: "message" as const,
-    label: s.length > 20 ? s.slice(0, 20) : s,
-    text: s,
-  }));
-  return {
-    type: "template",
-    altText: `${question} ${songs.join(" / ")}`,
-    template: {
-      type: "buttons",
-      text: question,
-      actions,
-    },
-  };
-}
-
-function pickSongs(phase: Phase, moreCount: number): string[] {
-  const idx = Math.min(moreCount, phase.songPools.length - 1);
-  return phase.songPools[idx];
-}
-
-//String→Messageに変換するヘルパー
-function textMsg(text: string): line.messagingApi.Message {
-  return { type: "text", text };
-}
-
-function renderStart(): string {
-  return [
-    "やっほー！カラキンだよー！",
-    "",
-    "ぼくが決めたルールで、みんなでカラオケで盛り上がろう！！",
-    "飽きた時は「カラキンばいばい」って言ってね",
-    "",
-    "わかったかな？",
-    "（「わかった」って言ってください）",
-  ].join("\n");
-}
-
-function renderChoose(phase: Phase, songs: string[]): Reply {
-  const lines: string[] = [];
-  lines.push(...phase.descriptionLines);
-  lines.push("");
-
-  if (phase.orderLines && phase.orderLines.length > 0) {
-    lines.push("順番はこれだよ");
-    lines.push(...phase.orderLines);
-    lines.push("");
-  }
-
-  // ① ルール説明はテキスト
-  const ruleText: line.messagingApi.Message = {
-    type: "text",
-    text: lines.join("\n"),
-  };
-
-  // ② 曲選択はボタン（最大4件）
-  const buttons = renderSongButtons("次は何を歌いますか？", songs);
-
-  // ③ 促しはテキスト（「決まった！」「他の曲を教えて」等）
-  const promptText: line.messagingApi.Message = {
-    type: "text",
-    text: phase.choosePrompt,
-  };
-
-  return [ruleText, buttons, promptText];
-}
-
-function renderReserve(): string {
-  return [
-    "早速デンモクで予約しよう！",
-    "",
-    "全員歌い終わったら誰か一人が「おわった」って言ってね",
-  ].join("\n");
-}
-
-function renderEnd(): string {
-  return [
-    "またいっしょに遊びたいときは「カラキン」って呼んでね",
-    "",
-    "また会おうぜ",
-  ].join("\n");
-}
-
-function renderUnknown(): string {
-  switch (step) {
-    case "AWAIT_ACK":
-      return "今は「わかった」って言ってね";
-    case "AWAIT_CHOOSE":
-      return "今は「決まった！」か「他の曲を教えて」を送ってね";
-    case "AWAIT_FINISH":
-      return "歌い終わったら「おわった」って言ってね";
-    default:
-      return "始めるときは「カラキン」って呼んでね";
-  }
-}
-
-/**
- * MVP版 createReply：RoomIdなし（グローバル状態のみ）
- * Phaseは配列 phases を増やすだけで拡張可能
- * 末尾Phaseが終わったら終了（あなたの指定：選択肢2）
- */
-function createReply(message: string): Reply | undefined {
-  const intent = detectIntent(message);
-
-  // 共通終了
-  if (intent === "EXIT") {
-    step = "ENDED";
-    return textMsg(renderEnd());
-  }
-
-  // 開始（IDLE/ENDEDのみ）
-  if ((step === "IDLE" || step === "ENDED") && intent === "START") {
-    step = "AWAIT_ACK";
-    phaseIndex = 0;
-    moreCounts = [];
-    return textMsg(renderStart());
-  }
-
-  // 以降、ステップごとに処理
-  if (step === "AWAIT_ACK") {
-    if (intent !== "ACK") return textMsg(renderUnknown());
-    step = "AWAIT_CHOOSE";
-    ensureMoreCountsSize(phases.length);
-    const phase = phases[phaseIndex];
-    return renderChoose(phase, pickSongs(phase, moreCounts[phaseIndex]));
-  }
-
-if (step === "AWAIT_CHOOSE") {
-  ensureMoreCountsSize(phases.length);
-  const phase = phases[phaseIndex];
-  const currentSongs = pickSongs(phase, moreCounts[phaseIndex]);
-
-  if (intent === "MORE") {
-    moreCounts[phaseIndex] += 1;
-    return renderChoose(phase, pickSongs(phase, moreCounts[phaseIndex]));
-  }
-
-  // ★追加：ボタンで送信された「曲名」を決定扱いにする
-  const norm = normalize(message);
-  const isSongSelected = currentSongs.some((s) => normalize(s) === norm);
-  if (isSongSelected) {
-    step = "AWAIT_FINISH";
-    return textMsg(renderReserve());
-  }
-
-  if (intent === "DECIDED") {
-    step = "AWAIT_FINISH";
-    return textMsg(renderReserve());
-  }
-
-  return textMsg(renderUnknown());
-}
-
-  if (step === "AWAIT_FINISH") {
-    if (intent !== "FINISHED") return textMsg(renderUnknown());
-
-    // 次のPhaseへ
-    phaseIndex += 1;
-
-    // 末尾まで行ったら終了（選択肢2）
-    if (phaseIndex >= phases.length) {
-      step = "ENDED";
-      return textMsg(renderEnd());
-    }
-
-    step = "AWAIT_CHOOSE";
-    ensureMoreCountsSize(phases.length);
-    const nextPhase = phases[phaseIndex];
-    return renderChoose(nextPhase, pickSongs(nextPhase, moreCounts[phaseIndex]));
-  }
-
-  return textMsg(renderUnknown());
-}
+// ★楽曲データを別ファイルから読み込む
+import { songs } from "./songs";
 
 const { MessagingApiClient } = line.messagingApi;
+
+// --- 参加者入力待ち状態を管理 ---
+const waitingForMembers: Record<string, boolean> = {};
+// --- 歌うジャンルの状態管理 ---
+const songState: Record<string, { genre?: string }> = {};
+
+/**
+ * 最初の案内文＋4択ボタン
+ */
+function startMessages(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "text",
+      text: [
+        "やっほー！カラキンだよー！",
+        "",
+        "僕に指示をしてくれたら、",
+        "　①歌う順番の提案",
+        "　②歌う曲の提案",
+        "　③遊び方の提案",
+        "　④カラキンの説明",
+        "をするよ～",
+        "",
+        "やってほしいことを教えてね！！",
+      ].join("\n"),
+    },
+    {
+      type: "template",
+      altText: "やってほしいことを選んでね",
+      template: {
+        type: "buttons",
+        text: "どれをやるかな？",
+        actions: [
+          { type: "message", label: "① 歌う順番", text: "①歌う順番の提案" },
+          { type: "message", label: "② 歌う曲", text: "②歌う曲の提案" },
+          { type: "message", label: "③ 遊び方", text: "③遊び方の提案" },
+          { type: "message", label: "④ 説明", text: "④カラキンの説明" },
+        ],
+      },
+    },
+  ];
+}
+
+function standardButtons(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "やってほしいことを選んでね",
+      template: {
+        type: "buttons",
+        text: "どれをやる？",
+        actions: [
+          { type: "message", label: "① 歌う順番", text: "①歌う順番の提案" },
+          { type: "message", label: "② 歌う曲", text: "②歌う曲の提案" },
+          { type: "message", label: "③ 遊び方", text: "③遊び方の提案" },
+          { type: "message", label: "④ 説明", text: "④カラキンの説明" },
+        ],
+      },
+    },
+  ];
+}
+
+// --- 曲の決定方法選択 ---
+function songButtons(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "どうやって決める？",
+      template: {
+        type: "buttons",
+        text: "どうやって決める？",
+        actions: [
+          { type: "message", label: "ランダムで1曲決める", text: "ランダムで1曲決める"},
+          { type: "message", label: "ジャンルから選ぶ", text: "ジャンルから選ぶ"},
+          { type: "message", label: "年別ヒット曲から選ぶ", text: "年別ヒット曲から選ぶ"},
+        ],
+      },
+    },
+  ];
+}
+
+// --- 歌う曲のジャンル選択ボタン（日本語送信） ---
+function genreButtons1(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どのジャンルにする？",
+        actions: [
+          { type: "message", label: "JPOP", text: "ジャンル：JPOP" },
+          { type: "message", label: "ロック", text: "ジャンル：ロック" },
+          { type: "message", label: "アニメ", text: "ジャンル：アニメ" },
+        ],
+      },
+    },
+  ];
+}
+
+function genreButtons2(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "他には...",
+        actions: [
+          { type: "message", label: "バラード", text: "ジャンル：バラード" },
+          { type: "message", label: "アイドル", text: "ジャンル：アイドル" },
+        ],
+      },
+    },
+  ];
+}
+
+// --- 曲の操作ボタン（候補を出した後も使う） ---
+function songAfterCandidateButtons(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "どうかな？",
+      template: {
+        type: "buttons",
+        text: "どうかな？",
+        actions: [
+          { type: "message", label: "もう一度候補を出す", text: "候補" },
+          { type: "message", label: "1曲に決める", text: "決定" },
+          { type: "message", label: "決まった", text: "決まった" },
+        ],
+      },
+    },
+  ];
+}
+
+
+// --- 曲の決定/候補ボタン ---
+function songDecisionButtons(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "1曲に決めるか候補を出すか選んでね",
+      template: {
+        type: "buttons",
+        text: "どうする？",
+        actions: [
+          { type: "message", label: "1曲に決める", text: "決定" },
+          { type: "message", label: "候補を出す", text: "候補" },
+        ],
+      },
+    },
+  ];
+}
+
+// --- 歌う曲の年代選択ボタン（日本語送信） ---
+function yearButtons1(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年代にする？",
+        actions: [
+          { type: "message", label: "2000～2003", text: "年代：2000～2003" },
+          { type: "message", label: "2004～2007", text: "年代：2004～2007" },
+          { type: "message", label: "2008～2011", text: "年代：2008～2011" },
+          { type: "message", label: "2012～2015", text: "年代：2012～2015" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearButtons2(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年代にする？",
+        actions: [
+          { type: "message", label: "2016～2019", text: "年代：2016～2019" },
+          { type: "message", label: "2020～2023", text: "年代：2020～2023" },
+          { type: "message", label: "2024～2025", text: "年代：2024～2025" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons1(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2000", text: "年：2000" },
+          { type: "message", label: "2001", text: "年：2001" },
+          { type: "message", label: "2002", text: "年：2002" },
+          { type: "message", label: "2003", text: "年：2003" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons2(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2004", text: "年：2004" },
+          { type: "message", label: "2005", text: "年：2005" },
+          { type: "message", label: "2006", text: "年：2006" },
+          { type: "message", label: "2007", text: "年：2007" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons3(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2008", text: "年：2008" },
+          { type: "message", label: "2009", text: "年：2009" },
+          { type: "message", label: "2010", text: "年：2010" },
+          { type: "message", label: "2011", text: "年：2011" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons4(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2012", text: "年：2012" },
+          { type: "message", label: "2013", text: "年：2013" },
+          { type: "message", label: "2014", text: "年：2014" },
+          { type: "message", label: "2015", text: "年：2015" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons5(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2016", text: "年：2016" },
+          { type: "message", label: "2017", text: "年：2017" },
+          { type: "message", label: "2018", text: "年：2018" },
+          { type: "message", label: "2019", text: "年：2019" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons6(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2020", text: "年：2020" },
+          { type: "message", label: "2021", text: "年：2021" },
+          { type: "message", label: "2022", text: "年：2022" },
+          { type: "message", label: "2023", text: "年：2023" },
+        ],
+      },
+    },
+  ];
+}
+
+function yearDicisionButtons7(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "じゃあ、歌う曲を決めよう",
+      template: {
+        type: "buttons",
+        text: "どの年にする？",
+        actions: [
+          { type: "message", label: "2024", text: "年：2024" },
+          { type: "message", label: "2025", text: "年：2025" },
+        ],
+      },
+    },
+  ];
+}
+
+// --- ジャンル日本語→キー変換マップ ---
+const genreMap: Record<string, string> = {
+  "ジャンル：JPOP": "Jpop",
+  "ジャンル：ロック": "Rock",
+  "ジャンル：アニメ": "Anime",
+  "ジャンル：バラード": "Ballad",
+  "ジャンル：アイドル": "Idol",
+};
+
+const eraButtonHandlers: Record<string, () => line.messagingApi.Message[]> = {
+  "2000～2003": yearDicisionButtons1,
+  "2004～2007": yearDicisionButtons2,
+  "2008～2011": yearDicisionButtons3,
+  "2012～2015": yearDicisionButtons4,
+  "2016～2019": yearDicisionButtons5,
+  "2020～2023": yearDicisionButtons6,
+  "2024～2025": yearDicisionButtons7,
+};
+
+
+// --- 年→キー変換マップ ---
+const yearMap: Record<string, string> = {
+  "年：2000": "y2000",
+  "年：2001": "y2001",
+  "年：2002": "y2002",
+  "年：2003": "y2003",
+  "年：2004": "y2004",
+  "年：2005": "y2005",
+  "年：2006": "y2006",
+  "年：2007": "y2007",
+  "年：2008": "y2008",
+  "年：2009": "y2009",
+  "年：2010": "y2010",
+  "年：2011": "y2011",
+  "年：2012": "y2012",
+  "年：2013": "y2013",
+  "年：2014": "y2014",
+  "年：2015": "y2015",
+  "年：2016": "y2016",
+  "年：2017": "y2017",
+  "年：2018": "y2018",
+  "年：2019": "y2019",
+  "年：2020": "y2020",
+  "年：2021": "y2021",
+  "年：2022": "y2022",
+  "年：2023": "y2023",
+  "年：2024": "y2024",
+  "年：2025": "y2025",
+};
 
 async function handleEvent(
   client: line.messagingApi.MessagingApiClient,
   event: line.WebhookEvent,
-): Promise<void> {
+) {
+  // --- 友だち追加 ---
+  if (event.type === "follow") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: startMessages(),
+    });
+    return;
+  }
+
+  // --- グループ・ルーム招待 ---
   if (event.type === "join") {
-    if (event.source.type === "group" || event.source.type === "room") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: startMessages(),
+    });
+    return;
+  }
+
+  // --- テキスト以外は無視 ---
+  if (event.type !== "message" || event.message.type !== "text") return;
+
+  const text = event.message.text;
+  const userId = event.source.userId || "unknown";
+
+  // --- 「カラキン」と言われたら最初の案内 ---
+  if (text === "カラキン") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: startMessages(),
+    });
+    return;
+  }
+
+  // --- 歌う順番の提案 ---
+  if (text === "①歌う順番の提案") {
+    waitingForMembers[userId] = true;
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: "参加者の名前をスペースで区切って入力してね！\n例: たろう じろう はなこ さぶろう",
+        },
+      ],
+    });
+    return;
+  }
+
+  // --- 名前入力待ち状態のとき、ランダム順を返す ---
+  if (waitingForMembers[userId]) {
+    const members = text.trim().split(/\s+/);
+    if (members.length === 0) {
       await client.replyMessage({
         replyToken: event.replyToken,
-        messages: [{ type: "text", text: GREETING }],
+        messages: [{ type: "text", text: "名前が入力されていないよ。もう一度入力してね。" }],
       });
-      console.log("グループに参加しました");
+      return;
     }
-  } else if (event.type === "message" && event.message.type === "text") {
-    const reply = createReply(event.message.text);
-    if (reply !== undefined) {
-      const messages = Array.isArray(reply) ? reply : [reply];
+
+    const shuffled = members.sort(() => Math.random() - 0.5);
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `今回の歌う順番はこんな感じでどうかな？\n\n${shuffled.join(" → ")}`,
+        },
+        {
+          type: "text",
+          text: "ほかにやってほしいことはある？",
+        },
+        ...standardButtons(),
+      ],
+    });
+
+    waitingForMembers[userId] = false;
+    return;
+  }
+
+  // --- 歌う曲の提案 ---
+  if (text === "②歌う曲の提案") {
+    songState[userId] = {};
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: "じゃあ、歌う曲を決めよう" },
+        ...songButtons(),
+      ],
+    });
+    return;
+  }
+
+  // --- ランダムで1曲決める (全ジャンル・全年代から) ---
+  if (text === "ランダムで1曲決める") {
+    // 1. 全ジャンル名（キー）の配列を取得
+    const allGenreKeys = Object.keys(songs);
+    
+    // 2. ジャンルをランダムに1つ選択
+    const randomGenreKey = allGenreKeys[Math.floor(Math.random() * allGenreKeys.length)];
+    
+    // 3. そのジャンルの曲リストを取得
+    const selectedSongList = songs[randomGenreKey];
+    
+    // 4. 曲リストからランダムに1曲選択
+    const randomSong = selectedSongList[Math.floor(Math.random() * selectedSongList.length)];
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `この曲はどうかな？\n\n🎵 ${randomSong}\n\n早速デンモクで予約しよう!!`,
+        },
+        { type: "text", text: "ほかにやってほしいことはある？" },
+        ...standardButtons(),
+      ],
+    });
+    return;
+  }
+  
+  // --- 歌う曲の提案（ジャンル） ---
+  if (text === "ジャンルから選ぶ") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: "じゃあ、ジャンルから決めよう" },
+        ...genreButtons1(),
+        ...genreButtons2(),
+      ],
+    });
+    return;
+  }
+
+  // --- ジャンル選択 ---
+  if (text.startsWith("ジャンル：")) {
+    const genreKey = genreMap[text];
+    if (!genreKey) return; // 無効なジャンルなら無視
+
+    songState[userId] = { genre: genreKey };
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: `ジャンルは${text.replace("ジャンル：", "")}だね！` },
+        ...songDecisionButtons(),
+      ],
+    });
+    return;
+  }
+
+  // --- 1曲決定 ---
+  if (text === "決定" && songState[userId]?.genre) {
+    const genre = songState[userId].genre!;
+    const song = songs[genre][Math.floor(Math.random() * songs[genre].length)];
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: `今回歌う曲はこれに決定！\n\n${song}\n\n早速デンモクで予約しよう!!` },
+        { type: "text", text: "ほかにやってほしいことはある？" },
+        ...standardButtons(),
+      ],
+    });
+    delete songState[userId];
+    return;
+  }
+
+  // --- 候補を出す ---
+  if (text === "候補" && songState[userId]?.genre) {
+    const genre = songState[userId].genre!;
+    const candidate = [...songs[genre]].sort(() => Math.random() - 0.5).slice(0, 3);
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: `候補はこんな感じだよ:\n\n${candidate.join("\n")}` },
+        ...songAfterCandidateButtons(), // ここで次の操作用ボタンを表示
+      ],
+    });
+    return;
+  }
+
+  // --- 曲が決まった場合 ---
+  if (text === "決まった") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: "そしたら早速デンモクで予約しよう!!\nほかにやってほしいことはある？" },
+        ...standardButtons(), // 元の4択に戻す
+      ],
+    });
+    delete songState[userId]; // 状態リセット
+    return;
+  }
+
+  // --- 歌う曲の提案（年代） ---
+  if (text === "年別ヒット曲から選ぶ") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: "じゃあ、年代から決めよう" },
+        ...yearButtons1(),
+        ...yearButtons2(),
+      ],
+    });
+    return;
+  }
+
+  // --- 年選択 ---
+  if (text.startsWith("年代：")) {
+    const era = text.replace("年代：", "").trim();
+    const handler = eraButtonHandlers[era];
+
+    if (!handler) {
       await client.replyMessage({
         replyToken: event.replyToken,
-        messages,
+        messages: [
+          { type: "text", text: "その年代はまだ対応していないよ💦" },
+        ],
       });
-      console.log(`メッセージ「${event.message.text}」に返信しました`);
-    } else {
-      console.log(`メッセージ「${event.message.text}」を無視しました`);
+      return;
     }
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: `${era}だね！` },
+        ...handler(), // ★ ここで yearDicisionButtons7() が実行される
+      ],
+    });
+    return;
+  }
+
+  // --- ジャンル決定 ---
+  if (text.startsWith("年：")) {
+    const yearKey = yearMap[text];
+    if (!yearKey) return; // 無効な年なら無視
+
+    songState[userId] = { genre: yearKey };
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: `${text.replace("年：", "")}年だね！` },
+        ...songDecisionButtons(),
+      ],
+    });
+    return;
+  }
+
+  if (text === "③遊び方の提案") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: "text", text: "楽しい遊び方を考えるよ！（準備中）" }],
+    });
+    return;
+  }
+
+  if (text === "④カラキンの説明") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        { type: "text", text: "カラキンはカラオケを盛り上げるためのBotだよ！" },
+      ],
+    });
+    return;
   }
 }
 
-function main(): void {
+function main() {
   const channelSecret = env.CHANNEL_SECRET;
   const channelAccessToken = env.CHANNEL_ACCESS_TOKEN;
-  assert(channelSecret !== undefined && channelAccessToken !== undefined);
-  const port = 21153;
+  assert(channelSecret && channelAccessToken);
 
   const client = new MessagingApiClient({ channelAccessToken });
 
   const app = express();
   app.post("/", line.middleware({ channelSecret }), (req, res) => {
-    // The middleware takes care of parsing the request body
     const { events } = req.body as { events: line.WebhookEvent[] };
     res.sendStatus(200);
-    for (const event of events) {
-      handleEvent(client, event).catch((err) => console.error(err));
-    }
+    events.forEach((e) => handleEvent(client, e));
   });
-  const httpServer = http.createServer(app);
-  httpServer.listen({ port }, () =>
-    console.log(`ポート${port}でサーバーを起動しました`),
-  );
+
+  http.createServer(app).listen(21153, () => {
+    console.log("ポート21153で起動しました");
+  });
 }
 
 main();

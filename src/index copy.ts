@@ -85,7 +85,7 @@ function pick(pool: string[][], count: number): string[] {
 
 function renderStart(): string {
   return [
-    "やっほー！カラキンだよー！",
+    "やっほー！カラキン2だよー！",
     "",
     "ぼくが決めたルールで、みんなでカラオケで盛り上がろう！！",
     "飽きた時は「カラキンばいばい」って言ってね",
