@@ -5,6 +5,8 @@ import assert from "assert";
 import { env } from "process";
 // ★楽曲データを別ファイルから読み込む
 import { songs } from "./songs";
+// ★ルールを別ファイルから読み込む
+import { rules, orderRules } from "./rules";
 
 const { MessagingApiClient } = line.messagingApi;
 
@@ -63,6 +65,24 @@ function standardButtons(): line.messagingApi.Message[] {
           { type: "message", label: "② 歌う曲", text: "②歌う曲の提案" },
           { type: "message", label: "③ 遊び方", text: "③遊び方の提案" },
           { type: "message", label: "④ 説明", text: "④カラキンの説明" },
+        ],
+      },
+    },
+  ];
+}
+
+// --- 順番決めの方式選択ボタン ---
+function orderTypeButtons(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "template",
+      altText: "どうやって順番を決める？",
+      template: {
+        type: "buttons",
+        text: "どうやって順番を決める？",
+        actions: [
+          { type: "message", label: "ランダムで決める", text: "ランダムで決める" },
+          { type: "message", label: "決め方を提案して", text: "決め方を提案して" },
         ],
       },
     },
@@ -134,8 +154,8 @@ function songAfterCandidateButtons(): line.messagingApi.Message[] {
         type: "buttons",
         text: "どうかな？",
         actions: [
-          { type: "message", label: "もう一度候補を出す", text: "候補" },
-          { type: "message", label: "1曲に決める", text: "決定" },
+          { type: "message", label: "もう一度候補を出す", text: "候補を出す" },
+          { type: "message", label: "1曲に決める", text: "1曲に決める" },
           { type: "message", label: "決まった", text: "決まった" },
         ],
       },
@@ -154,8 +174,8 @@ function songDecisionButtons(): line.messagingApi.Message[] {
         type: "buttons",
         text: "どうする？",
         actions: [
-          { type: "message", label: "1曲に決める", text: "決定" },
-          { type: "message", label: "候補を出す", text: "候補" },
+          { type: "message", label: "1曲に決める", text: "1曲に決める" },
+          { type: "message", label: "候補を出す", text: "候補を出す" },
         ],
       },
     },
@@ -418,16 +438,45 @@ async function handleEvent(
     return;
   }
 
-  // --- 歌う順番の提案 ---
+// --- ①歌う順番の提案（最初の入り口） ---
   if (text === "①歌う順番の提案") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: orderTypeButtons(),
+    });
+    return;
+  }
+
+  // --- ランダムで決める（名前入力待ちへ） ---
+  if (text === "ランダムで決める") {
     waitingForMembers[userId] = true;
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "text",
-          text: "参加者の名前をスペースで区切って入力してね！\n例: たろう じろう はなこ さぶろう",
+          text: "了解！参加者の名前をスペースで区切って入力してね！\n例: たろう じろう はなこ",
         },
+      ],
+    });
+    return;
+  }
+
+  // --- 決め方を提案する ---
+  if (text === "決め方を提案して") {
+    const orderKeys = Object.keys(orderRules);
+    const randomOrderTitle = orderKeys[Math.floor(Math.random() * orderKeys.length)];
+    const orderDescription = orderRules[randomOrderTitle];
+
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: `こんな順番の決め方はどうかな？\n\n【${randomOrderTitle}】\n${orderDescription}`,
+        },
+        { type: "text", text: "ほかにやってほしいことはある？" },
+        ...standardButtons(),
       ],
     });
     return;
@@ -535,7 +584,7 @@ async function handleEvent(
   }
 
   // --- 1曲決定 ---
-  if (text === "決定" && songState[userId]?.genre) {
+  if (text === "1曲に決める" && songState[userId]?.genre) {
     const genre = songState[userId].genre!;
     const song = songs[genre][Math.floor(Math.random() * songs[genre].length)];
     await client.replyMessage({
@@ -551,7 +600,7 @@ async function handleEvent(
   }
 
   // --- 候補を出す ---
-  if (text === "候補" && songState[userId]?.genre) {
+  if (text === "候補を出す" && songState[userId]?.genre) {
     const genre = songState[userId].genre!;
     const candidate = [...songs[genre]].sort(() => Math.random() - 0.5).slice(0, 3);
     await client.replyMessage({
@@ -631,10 +680,27 @@ async function handleEvent(
     return;
   }
 
+  // --- 遊び方の決定 ---
   if (text === "③遊び方の提案") {
+    // 1. ルール名（キー）の配列を取得
+    const ruleKeys = Object.keys(rules);
+    
+    // 2. ルール名をランダムに1つ選択
+    const randomRuleTitle = ruleKeys[Math.floor(Math.random() * ruleKeys.length)];
+    
+    // 3. そのルール名に対応する説明文を取得
+    const ruleDescription = rules[randomRuleTitle];
+
     await client.replyMessage({
       replyToken: event.replyToken,
-      messages: [{ type: "text", text: "楽しい遊び方を考えるよ！（準備中）" }],
+      messages: [
+        {
+          type: "text",
+          text: `こんな遊び方はどうかな？！！\n\n【${randomRuleTitle}】\n${ruleDescription}`,
+        },
+        { type: "text", text: "ほかにやってほしいことはある？" },
+        ...standardButtons(),
+      ],
     });
     return;
   }
@@ -643,7 +709,16 @@ async function handleEvent(
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
-        { type: "text", text: "カラキンはカラオケを盛り上げるためのBotだよ！" },
+        { type: "text", 
+          text:[
+            "カラキンはカラオケを盛り上げるためのBotだよ！",
+            "",
+            "僕に指示をしてくれたら、歌う順番や歌う曲、遊び方を提案するよ。",
+            "",
+            "ひとりの時も、みんなでいるときも、困ったら僕を頼ってね！",
+          ].join("\n"),
+        },
+        ...standardButtons(),
       ],
     });
     return;
