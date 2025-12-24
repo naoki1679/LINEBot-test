@@ -193,6 +193,6 @@ export const songs: Record<string, string[]> = {
   y2025: [
     "ライラック / Mrs. GREEN APPLE", "Bling-Bang-Bang-Born / Creepy Nuts", "幾億光年 / Omoinotake", "晩餐歌 / tuki.", "はいよろこんで / こっちのけんと", "アポロドロス / Mrs. GREEN APPLE", "familie / Mrs. GREEN APPLE", "がらくた / 米津玄師", "Azalea / 米津玄師", "新しい恋人達に / back number", 
     "カーテンコール / 優里", "モノトーン / YOASOBI", "New Look / MISAMO", "Whiplash / aespa", "APT. / ROSÉ & Bruno Mars", "僕さえいれば / back number", "太陽 / Vaundy", "風神 / 藤井 風", "エスカレーション / 菅田将暉", "UNDEAD / YOASOBI", 
-    "Sharon / Official髭男dism", "Same Blue / Official髭男dism", "エンドレス / Official髭男dism", "15分 / tuki.", "ルル / Ado", "初夏 / あいみょん", "ざらめ / あいみょん", "忘レ敵 / スピッツ", "SOULSOUP / Official髭男dism", "タイムパラドックス / Vaundy"
+    "Sharon / Official髭男dism", "Same Blue / Official髭男dism", "エンドレス / Official髭男dism", "15分 / tuki.", "ルル / Ado", "初夏 / あいみょん", "ざらめ / あいみょん", "IRIS OUT / 米津玄師", "SOULSOUP / Official髭男dism", "タイムパラドックス / Vaundy"
   ],
 };
