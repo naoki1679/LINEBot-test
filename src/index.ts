@@ -1,747 +1,861 @@
 import * as line from "@line/bot-sdk";
 import express from "express";
 import http from "node:http";
-import assert from "assert";
 import { env } from "process";
-// ★楽曲データを別ファイルから読み込む
-import { songs } from "./songs";
-// ★ルールを別ファイルから読み込む
-import { gameRules, orderRules } from "./rules";
+import { JSONFilePreset } from 'lowdb/node';
+
+import { songs } from "./songs.js";
+import { gameRules, orderRules } from "./rules.js";
 
 const { MessagingApiClient } = line.messagingApi;
 
-// --- 参加者入力待ち状態を管理 ---
-const waitingForMembers: Record<string, boolean> = {};
-// --- 歌うジャンルの状態管理 ---
-const songState: Record<string, { genre?: string }> = {};
+// --- 1. データベース・状態の型定義 ---
+type UserData = {
+  userId: string;
+  displayName: string;
+  mySongs: string[];
+  isRegisteringSong?: boolean; 
+};
 
-/**
- * 最初の案内文＋4択ボタン
- */
+interface GroupData {
+  groupId: string;
+  memberIds: string[];
+  memberNames: string[];
+  isRegistering: boolean;
+  lastOrder?: string;
+  lastTeams?: string[][]; // ★追加：[['ID1', 'ID2'], ['ID3', 'ID4', 'ID5']] の形式で保存
+}
+
+type Data = { users: UserData[]; groups: GroupData[]; };
+const defaultData: Data = { users: [], groups: [] };
+
+interface TempState { genreKey?: string; }
+const tempStates: Record<string, TempState> = {};
+
+interface TempState {
+  genreKey?: string;
+  searchCache?: any[]; // 検索結果50件を保存する場所
+  lastQuery?: string;  // 今何のワードで検索しているか
+}
+
+// --- 2. ユーティリティ ---
+function getStateKey(event: line.WebhookEvent): string {
+  const source = event.source;
+  if ("groupId" in source) return source.groupId;
+  if ("userId" in source) return source.userId || "unknown";
+  return "unknown";
+}
+
+async function searchSongs(query: string) {
+  try {
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&country=jp&lang=ja_jp&media=music&limit=50`;
+    const response = await fetch(url);
+    const data: any = await response.json();
+    return data.results.map((track: any) => ({
+      fullName: `${track.trackName} / ${track.artistName}`,
+      trackName: track.trackName, 
+      artistName: track.artistName
+    }));
+  } catch (e) { return []; }
+}
+
+// --- 3. メッセージ・ボタンテンプレート群 ---
 function startMessages(): line.messagingApi.Message[] {
   return [
-    {
-      type: "text",
-      text: [
-        "やっほー！カラキンだよー！",
-        "",
-        "僕に指示をしてくれたら、",
-        "　①歌う順番の提案",
-        "　②歌う曲の提案",
-        "　③遊び方の提案",
-        "　④カラキンの説明",
-        "をするよ～",
-        "",
-        "やってほしいことを教えてね！！",
-      ].join("\n"),
-    },
-    {
-      type: "template",
-      altText: "やってほしいことを選んでね",
-      template: {
-        type: "buttons",
-        text: "どれをやるかな？",
-        actions: [
-          { type: "message", label: "① 歌う順番", text: "①歌う順番の提案" },
-          { type: "message", label: "② 歌う曲", text: "②歌う曲の提案" },
-          { type: "message", label: "③ 遊び方", text: "③遊び方の提案" },
-          { type: "message", label: "④ 説明", text: "④カラキンの説明" },
-        ],
-      },
-    },
+    { type: "text", text: "カラキンだよ！歌う順番や曲を提案して、カラオケを盛り上げるよ！🎵" },
+    { type: "template", altText: "メインメニュー", template: { type: "buttons", text: "まずはメニューを選んでね", actions: [
+      { type: "message", label: "⚙️ メニューを表示", text: "メニュー" },
+      { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
+    ]}}
   ];
 }
 
-function standardButtons(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "やってほしいことを選んでね",
-      template: {
-        type: "buttons",
-        text: "どれをやる？",
-        actions: [
-          { type: "message", label: "① 歌う順番", text: "①歌う順番の提案" },
-          { type: "message", label: "② 歌う曲", text: "②歌う曲の提案" },
-          { type: "message", label: "③ 遊び方", text: "③遊び方の提案" },
-          { type: "message", label: "④ 説明", text: "④カラキンの説明" },
-        ],
-      },
-    },
-  ];
-}
+function songDecisionButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "決定", template: { type: "buttons", text: "どうする？", actions: [{ type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "候補を出す", text: "候補を出す" }] } }]; }
+function songAfterCandidateButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "候補", template: { type: "buttons", text: "どうかな？", actions: [{ type: "message", label: "もう一度候補", text: "候補を出す" }, { type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "決まった", text: "決まった" }] } }]; }
+function genreButtons1(): line.messagingApi.Message[] { return [{ type: "template", altText: "G1", template: { type: "buttons", text: "どのジャンルにする？", actions: [{ type: "message", label: "JPOP", text: "ジャンル：JPOP" }, { type: "message", label: "ロック", text: "ジャンル：ロック" }, { type: "message", label: "アニメ", text: "ジャンル：アニメ" }, { type: "message", label: "他...", text: "ジャンル選択(他)" }] } }]; }
+function genreButtons2(): line.messagingApi.Message[] { return [{ type: "template", altText: "G2", template: { type: "buttons", text: "他には...", actions: [{ type: "message", label: "バラード", text: "ジャンル：バラード" }, { type: "message", label: "アイドル", text: "ジャンル：アイドル" }] } }]; }
+function yearButtons1(): line.messagingApi.Message[] { return [{ type: "template", altText: "Y1", template: { type: "buttons", text: "どの時代？(1/2)", actions: [{ type: "message", label: "2000-2003", text: "年代：2000～2003" }, { type: "message", label: "2004-2007", text: "年代：2004～2007" }, { type: "message", label: "2008-2011", text: "年代：2008～2011" }, { type: "message", label: "2012-2015", text: "年代：2012～2015" }] } }]; }
+function yearButtons2(): line.messagingApi.Message[] { return [{ type: "template", altText: "Y2", template: { type: "buttons", text: "どの時代？(2/2)", actions: [{ type: "message", label: "2016-2019", text: "年代：2016～2019" }, { type: "message", label: "2020-2023", text: "年代：2020～2023" }, { type: "message", label: "2024-2025", text: "年代：2024～2025" }] } }]; }
 
-// --- 順番決めの方式選択ボタン ---
-function orderTypeButtons(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "どうやって順番を決める？",
-      template: {
-        type: "buttons",
-        text: "どうやって順番を決める？",
-        actions: [
-          { type: "message", label: "ランダムで決める", text: "ランダムで決める" },
-          { type: "message", label: "決め方を提案して", text: "決め方を提案して" },
-        ],
-      },
-    },
-  ];
-}
-
-// --- 曲の決定方法選択 ---
-function songButtons(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "どうやって決める？",
-      template: {
-        type: "buttons",
-        text: "どうやって決める？",
-        actions: [
-          { type: "message", label: "ランダムで1曲決める", text: "ランダムで1曲決める"},
-          { type: "message", label: "ジャンルから選ぶ", text: "ジャンルから選ぶ"},
-          { type: "message", label: "年別ヒット曲から選ぶ", text: "年別ヒット曲から選ぶ"},
-        ],
-      },
-    },
-  ];
-}
-
-// --- 歌う曲のジャンル選択ボタン（日本語送信） ---
-function genreButtons1(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どのジャンルにする？",
-        actions: [
-          { type: "message", label: "JPOP", text: "ジャンル：JPOP" },
-          { type: "message", label: "ロック", text: "ジャンル：ロック" },
-          { type: "message", label: "アニメ", text: "ジャンル：アニメ" },
-        ],
-      },
-    },
-  ];
-}
-
-function genreButtons2(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "他には...",
-        actions: [
-          { type: "message", label: "バラード", text: "ジャンル：バラード" },
-          { type: "message", label: "アイドル", text: "ジャンル：アイドル" },
-        ],
-      },
-    },
-  ];
-}
-
-// --- 曲の操作ボタン（候補を出した後も使う） ---
-function songAfterCandidateButtons(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "どうかな？",
-      template: {
-        type: "buttons",
-        text: "どうかな？",
-        actions: [
-          { type: "message", label: "もう一度候補を出す", text: "候補を出す" },
-          { type: "message", label: "1曲に決める", text: "1曲に決める" },
-          { type: "message", label: "決まった", text: "決まった" },
-        ],
-      },
-    },
-  ];
-}
-
-
-// --- 曲の決定/候補ボタン ---
-function songDecisionButtons(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "1曲に決めるか候補を出すか選んでね",
-      template: {
-        type: "buttons",
-        text: "どうする？",
-        actions: [
-          { type: "message", label: "1曲に決める", text: "1曲に決める" },
-          { type: "message", label: "候補を出す", text: "候補を出す" },
-        ],
-      },
-    },
-  ];
-}
-
-// --- 歌う曲の年代選択ボタン（日本語送信） ---
-function yearButtons1(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年代にする？",
-        actions: [
-          { type: "message", label: "2000～2003", text: "年代：2000～2003" },
-          { type: "message", label: "2004～2007", text: "年代：2004～2007" },
-          { type: "message", label: "2008～2011", text: "年代：2008～2011" },
-          { type: "message", label: "2012～2015", text: "年代：2012～2015" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearButtons2(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年代にする？",
-        actions: [
-          { type: "message", label: "2016～2019", text: "年代：2016～2019" },
-          { type: "message", label: "2020～2023", text: "年代：2020～2023" },
-          { type: "message", label: "2024～2025", text: "年代：2024～2025" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons1(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2000", text: "年：2000" },
-          { type: "message", label: "2001", text: "年：2001" },
-          { type: "message", label: "2002", text: "年：2002" },
-          { type: "message", label: "2003", text: "年：2003" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons2(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2004", text: "年：2004" },
-          { type: "message", label: "2005", text: "年：2005" },
-          { type: "message", label: "2006", text: "年：2006" },
-          { type: "message", label: "2007", text: "年：2007" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons3(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2008", text: "年：2008" },
-          { type: "message", label: "2009", text: "年：2009" },
-          { type: "message", label: "2010", text: "年：2010" },
-          { type: "message", label: "2011", text: "年：2011" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons4(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2012", text: "年：2012" },
-          { type: "message", label: "2013", text: "年：2013" },
-          { type: "message", label: "2014", text: "年：2014" },
-          { type: "message", label: "2015", text: "年：2015" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons5(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2016", text: "年：2016" },
-          { type: "message", label: "2017", text: "年：2017" },
-          { type: "message", label: "2018", text: "年：2018" },
-          { type: "message", label: "2019", text: "年：2019" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons6(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2020", text: "年：2020" },
-          { type: "message", label: "2021", text: "年：2021" },
-          { type: "message", label: "2022", text: "年：2022" },
-          { type: "message", label: "2023", text: "年：2023" },
-        ],
-      },
-    },
-  ];
-}
-
-function yearDicisionButtons7(): line.messagingApi.Message[] {
-  return [
-    {
-      type: "template",
-      altText: "じゃあ、歌う曲を決めよう",
-      template: {
-        type: "buttons",
-        text: "どの年にする？",
-        actions: [
-          { type: "message", label: "2024", text: "年：2024" },
-          { type: "message", label: "2025", text: "年：2025" },
-        ],
-      },
-    },
-  ];
-}
-
-// --- ジャンル日本語→キー変換マップ ---
-const genreMap: Record<string, string> = {
-  "ジャンル：JPOP": "Jpop",
-  "ジャンル：ロック": "Rock",
-  "ジャンル：アニメ": "Anime",
-  "ジャンル：バラード": "Ballad",
-  "ジャンル：アイドル": "Idol",
-};
+// --- 4. マッピングデータ ---
+const genreMap: Record<string, string> = { "ジャンル：JPOP": "Jpop", "ジャンル：ロック": "Rock", "ジャンル：アニメ": "Anime", "ジャンル：バラード": "Ballad", "ジャンル：アイドル": "Idol" };
+const yearMap: Record<string, string> = {};
+for (let y = 2000; y <= 2025; y++) { yearMap[`年：${y}`] = `y${y}`; }
 
 const eraButtonHandlers: Record<string, () => line.messagingApi.Message[]> = {
-  "2000～2003": yearDicisionButtons1,
-  "2004～2007": yearDicisionButtons2,
-  "2008～2011": yearDicisionButtons3,
-  "2012～2015": yearDicisionButtons4,
-  "2016～2019": yearDicisionButtons5,
-  "2020～2023": yearDicisionButtons6,
-  "2024～2025": yearDicisionButtons7,
+  "2000～2003": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2000", text: "年：2000" }, { type: "message", label: "2001", text: "年：2001" }, { type: "message", label: "2002", text: "年：2002" }, { type: "message", label: "2003", text: "年：2003" }] } }],
+  "2004～2007": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2004", text: "年：2004" }, { type: "message", label: "2005", text: "年：2005" }, { type: "message", label: "2006", text: "年：2006" }, { type: "message", label: "2007", text: "年：2007" }] } }],
+  "2008～2011": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2008", text: "年：2008" }, { type: "message", label: "2009", text: "年：2009" }, { type: "message", label: "2010", text: "年：2010" }, { type: "message", label: "2011", text: "年：2011" }] } }],
+  "2012～2015": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2012", text: "年：2012" }, { type: "message", label: "2013", text: "年：2013" }, { type: "message", label: "2014", text: "年：2014" }, { type: "message", label: "2015", text: "年：2015" }] } }],
+  "2016～2019": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2016", text: "年：2016" }, { type: "message", label: "2017", text: "年：2017" }, { type: "message", label: "2018", text: "年：2018" }, { type: "message", label: "2019", text: "年：2019" }] } }],
+  "2020～2023": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2020", text: "年：2020" }, { type: "message", label: "2021", text: "年：2021" }, { type: "message", label: "2022", text: "年：2022" }, { type: "message", label: "2023", text: "年：2023" }] } }],
+  "2024～2025": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2024", text: "年：2024" }, { type: "message", label: "2025", text: "年：2025" }] } }],
 };
 
+// --- 5. メインハンドラー ---
+async function handleEvent(client: line.messagingApi.MessagingApiClient, event: line.WebhookEvent, db: any) {
+  const stateKey = getStateKey(event);
+  const currentState = tempStates[stateKey] || (tempStates[stateKey] = {});
 
-// --- 年→キー変換マップ ---
-const yearMap: Record<string, string> = {
-  "年：2000": "y2000",
-  "年：2001": "y2001",
-  "年：2002": "y2002",
-  "年：2003": "y2003",
-  "年：2004": "y2004",
-  "年：2005": "y2005",
-  "年：2006": "y2006",
-  "年：2007": "y2007",
-  "年：2008": "y2008",
-  "年：2009": "y2009",
-  "年：2010": "y2010",
-  "年：2011": "y2011",
-  "年：2012": "y2012",
-  "年：2013": "y2013",
-  "年：2014": "y2014",
-  "年：2015": "y2015",
-  "年：2016": "y2016",
-  "年：2017": "y2017",
-  "年：2018": "y2018",
-  "年：2019": "y2019",
-  "年：2020": "y2020",
-  "年：2021": "y2021",
-  "年：2022": "y2022",
-  "年：2023": "y2023",
-  "年：2024": "y2024",
-  "年：2025": "y2025",
-};
-
-async function handleEvent(
-  client: line.messagingApi.MessagingApiClient,
-  event: line.WebhookEvent,
-) {
-  // --- 友だち追加 ---
-  if (event.type === "follow") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: startMessages(),
-    });
-    return;
+  // A. 自動挨拶イベント
+  if (event.type === "follow" || event.type === "join") {
+    return client.replyMessage({ replyToken: event.replyToken, messages: startMessages() });
   }
 
-  // --- グループ・ルーム招待 ---
-  if (event.type === "join") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: startMessages(),
-    });
-    return;
-  }
+  // B. ポストバック（検索結果の登録）
+  if (event.type === "postback") {
+    const userId = event.source.userId!;
+    const songData = event.postback.data; 
+    const userData = db.data.users.find((u: UserData) => u.userId === userId);
+    
+    // --- 【追加】すでに登録済みのボタンが押された場合 (ignore) ---
+    if (songData === "ignore") {
+      const query = currentState.lastQuery || "検索結果";
+      const currentIndex = (currentState as any).currentIndex || 0;
+      // キャッシュから現在の5件を取得
+      const displaySongs = currentState.searchCache?.slice(currentIndex, currentIndex + 5) || [];
 
-  // --- テキスト以外は無視 ---
-  if (event.type !== "message" || event.message.type !== "text") return;
-
-  const text = event.message.text;
-  const userId = event.source.userId || "unknown";
-
-  // --- 「カラキン」と言われたら最初の案内 ---
-  if (text === "カラキン") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: startMessages(),
-    });
-    return;
-  }
-
-// --- ①歌う順番の提案（最初の入り口） ---
-  if (text === "①歌う順番の提案") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: orderTypeButtons(),
-    });
-    return;
-  }
-
-  // --- ランダムで決める（名前入力待ちへ） ---
-  if (text === "ランダムで決める") {
-    waitingForMembers[userId] = true;
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "text",
-          text: "了解！参加者の名前をスペースで区切って入力してね！\n例: たろう じろう はなこ",
-        },
-      ],
-    });
-    return;
-  }
-
-  // --- 決め方を提案する ---
-  if (text === "決め方を提案して") {
-    const orderKeys = Object.keys(orderRules);
-    const randomOrderTitle = orderKeys[Math.floor(Math.random() * orderKeys.length)];
-    const orderDescription = orderRules[randomOrderTitle];
-
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "text",
-          text: `こんな順番の決め方はどうかな？\n\n【${randomOrderTitle}】\n${orderDescription}`,
-        },
-        { type: "text", text: "ほかにやってほしいことはある？" },
-        ...standardButtons(),
-      ],
-    });
-    return;
-  }
-
-  // --- 名前入力待ち状態のとき、ランダム順を返す ---
-  if (waitingForMembers[userId]) {
-    const members = text.trim().split(/\s+/);
-    if (members.length === 0) {
-      await client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [{ type: "text", text: "名前が入力されていないよ。もう一度入力してね。" }],
+      // 再表示用のFlexアイテム作成（handleEvent内のロジックと同じ）
+      const songItems = displaySongs.map((c: any) => {
+        const isAdded = userData?.mySongs.includes(c.fullName);
+        return {
+          type: "box", layout: "horizontal", margin: "lg", contents: [
+            { type: "box", layout: "vertical", flex: 4, contents: [
+              { type: "text", text: c.trackName, weight: "bold", wrap: true, color: isAdded ? "#aaaaaa" : "#000000" },
+              { type: "text", text: c.artistName, size: "xs", color: "#888888" }
+            ]},
+            { 
+              type: "button", style: isAdded ? "secondary" : "primary", height: "sm", flex: 2,
+              action: { 
+                type: "postback", 
+                label: isAdded ? "登録済" : "登録", 
+                data: isAdded ? "ignore" : `save:${c.fullName}`,
+                displayText: isAdded ? `「${c.fullName}」を登録！` : `✅ ${c.fullName} を登録！`
+              }
+            }
+          ]
+        };
       });
-      return;
-    }
 
-    const shuffled = members.sort(() => Math.random() - 0.5);
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "text",
-          text: `今回の歌う順番はこんな感じでどうかな？\n\n${shuffled.join(" → ")}`,
-        },
-        {
-          type: "text",
-          text: "ほかにやってほしいことはある？",
-        },
-        ...standardButtons(),
-      ],
-    });
+      const footerContents = [];
+      if (currentState.searchCache && (currentIndex + 5) < currentState.searchCache.length) {
+        footerContents.push({ type: "separator", margin: "xl" });
+        footerContents.push({
+          type: "button", style: "secondary", margin: "md",
+          action: { type: "message", label: "🔍 次の5曲を表示", text: "次の5曲を表示" }
+        });
+      }
 
-    waitingForMembers[userId] = false;
-    return;
-  }
+      const getRegMenu = (infoText: string): line.messagingApi.Message[] => [
+        { type: "text", text: infoText },
+        { type: "template", altText: "登録中メニュー",
+          template: {
+            type: "buttons", text: "リストの操作や確認はこちらから",
+            actions: [
+              { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+              { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+              { type: "message", label: "✅ 登録終了", text: "登録終了" },
+            ]
+          }
+        }
+      ];
 
-  // --- 歌う曲の提案 ---
-  if (text === "②歌う曲の提案") {
-    songState[userId] = {};
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: "じゃあ、歌う曲を決めよう" },
-        ...songButtons(),
-      ],
-    });
-    return;
-  }
-
-  // --- ランダムで1曲決める (全ジャンル・全年代から) ---
-  if (text === "ランダムで1曲決める") {
-    // 1. 全ジャンル名（キー）の配列を取得
-    const allGenreKeys = Object.keys(songs);
-    
-    // 2. ジャンルをランダムに1つ選択
-    const randomGenreKey = allGenreKeys[Math.floor(Math.random() * allGenreKeys.length)];
-    
-    // 3. そのジャンルの曲リストを取得
-    const selectedSongList = songs[randomGenreKey];
-    
-    // 4. 曲リストからランダムに1曲選択
-    const randomSong = selectedSongList[Math.floor(Math.random() * selectedSongList.length)];
-
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "text",
-          text: `この曲はどうかな？\n\n🎵 ${randomSong}\n\n早速デンモクで予約しよう!!`,
-        },
-        { type: "text", text: "ほかにやってほしいことはある？" },
-        ...standardButtons(),
-      ],
-    });
-    return;
-  }
-  
-  // --- 歌う曲の提案（ジャンル） ---
-  if (text === "ジャンルから選ぶ") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: "じゃあ、ジャンルから決めよう" },
-        ...genreButtons1(),
-        ...genreButtons2(),
-      ],
-    });
-    return;
-  }
-
-  // --- ジャンル選択 ---
-  if (text.startsWith("ジャンル：")) {
-    const genreKey = genreMap[text];
-    if (!genreKey) return; // 無効なジャンルなら無視
-
-    songState[userId] = { genre: genreKey };
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: `ジャンルは${text.replace("ジャンル：", "")}だね！` },
-        ...songDecisionButtons(),
-      ],
-    });
-    return;
-  }
-
-  // --- 1曲決定 ---
-  if (text === "1曲に決める" && songState[userId]?.genre) {
-    const genre = songState[userId].genre!;
-    const song = songs[genre][Math.floor(Math.random() * songs[genre].length)];
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: `今回歌う曲はこれに決定！\n\n${song}\n\n早速デンモクで予約しよう!!` },
-        { type: "text", text: "ほかにやってほしいことはある？" },
-        ...standardButtons(),
-      ],
-    });
-    delete songState[userId];
-    return;
-  }
-
-  // --- 候補を出す ---
-  if (text === "候補を出す" && songState[userId]?.genre) {
-    const genre = songState[userId].genre!;
-    const candidate = [...songs[genre]].sort(() => Math.random() - 0.5).slice(0, 3);
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: `候補はこんな感じだよ:\n\n${candidate.join("\n")}` },
-        ...songAfterCandidateButtons(), // ここで次の操作用ボタンを表示
-      ],
-    });
-    return;
-  }
-
-  // --- 曲が決まった場合 ---
-  if (text === "決まった") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: "そしたら早速デンモクで予約しよう!!\nほかにやってほしいことはある？" },
-        ...standardButtons(), // 元の4択に戻す
-      ],
-    });
-    delete songState[userId]; // 状態リセット
-    return;
-  }
-
-  // --- 歌う曲の提案（年代） ---
-  if (text === "年別ヒット曲から選ぶ") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: "じゃあ、年代から決めよう" },
-        ...yearButtons1(),
-        ...yearButtons2(),
-      ],
-    });
-    return;
-  }
-
-  // --- 年選択 ---
-  if (text.startsWith("年代：")) {
-    const era = text.replace("年代：", "").trim();
-    const handler = eraButtonHandlers[era];
-
-    if (!handler) {
-      await client.replyMessage({
+      return client.replyMessage({
         replyToken: event.replyToken,
         messages: [
-          { type: "text", text: "その年代はまだ対応していないよ💦" },
-        ],
+          { type: "text", text: `⚠️その曲は、すでに登録済みだよ！` },
+          {
+            type: "flex", altText: "検索結果の再表示",
+            contents: {
+              type: "bubble",
+              body: {
+                type: "box", layout: "vertical",
+                contents: [
+                  { type: "text", text: `🎵 ${query} (${currentIndex + 1}〜${currentIndex + 5}位)`, weight: "bold", size: "md", color: "#1DB954" },
+                  ...songItems as any,
+                  ...footerContents as any
+                ]
+              }
+            }
+          },
+          ...getRegMenu("お目当ての曲はあるかな？")
+        ]
       });
-      return;
     }
 
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: `${era}だね！` },
-        ...handler(), // ★ ここで yearDicisionButtons7() が実行される
-      ],
-    });
+  
+    //曲の保存処理
+    if (songData.startsWith("save:")) {
+      const target = songData.replace("save:", "");
+      let isDuplicate = false; // ★ 重複フラグ
+
+      await db.update((data: Data) => {
+        let user = data.users.find((u: UserData) => u.userId === userId);
+        if (user) {
+          if (user.mySongs.includes(target)) {
+            isDuplicate = true; // ★ すでにある場合はフラグを立てる
+          } else {
+            user.mySongs.push(target);
+          }
+        }
+      });
+
+      // --- 重複していた場合の返信 ---
+      if (isDuplicate) {
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [
+            { type: "text", text: `⚠️「${target}」はすでにマイリストに入っているよ！` },
+            {
+              type: "template",
+              altText: "登録中メニュー",
+              template: {
+                type: "buttons",
+                text: "続けて登録するか、操作を選んでね",
+                actions: [
+                  { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+                  { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+                  { type: "message", label: "✅ 登録終了", text: "登録終了" },
+                ]
+              }
+            }
+          ]
+        });
+      }
+
+      // --- 成功時の出し分け判定 ---
+      const isGroupPostback = event.source.type !== "user";
+
+      if (isGroupPostback) {
+        //グループチャットで登録ボタンが押されたとき
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [{ type: "text", text: `✅ ${target} を登録したよ！` }]
+        });
+      } else {
+        //個人チャットで登録ボタンが押されたとき
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [
+            { type: "text", text: `✅「${target}」を登録したよ！` },
+            {
+              type: "template",
+              altText: "登録中メニュー",
+              template: {
+                type: "buttons",
+                text: "続けて登録するか、操作を選んでね",
+                actions: [
+                  { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+                  { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+                  { type: "message", label: "✅ 登録終了", text: "登録終了" },
+                ]
+              }
+            }
+          ]
+        });
+      }
+    }
+
+    const getMyListMenu = (): line.messagingApi.Message[] => [{
+      type: "template",
+      altText: "マイリスト管理メニュー",
+      template: {
+        type: "buttons",
+        text: "マイリスト管理",
+        actions: [
+          { type: "message", label: "📋 リストを確認する", text: "マイリスト確認" },
+          { type: "message", label: "✂️ リストを編集する", text: "マイリスト編集" },
+          { type: "message", label: "🏠 戻る", text: "メニュー" }
+        ]
+      }
+    }];
+
+    // --- 削除処理 ---
+    if (songData.startsWith("delete:")) {
+      const target = songData.replace("delete:", "");
+      
+      await db.update((data: Data) => {
+        const u = data.users.find((x: UserData) => x.userId === userId);
+        if (u) {
+          // targetと一致しない曲だけを残す（＝targetを消す）
+          u.mySongs = u.mySongs.filter((song: string) => song !== target);
+        }
+      });
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: "text", text: `🗑️「${target}」をリストから削除したよ。` }, ...getMyListMenu()]
+      });
+    }
+
     return;
   }
 
-  // --- ジャンル決定 ---
-  if (text.startsWith("年：")) {
-    const yearKey = yearMap[text];
-    if (!yearKey) return; // 無効な年なら無視
+  // C. メッセージ判定
+  if (event.type !== "message" || event.message.type !== "text") return;
+  const text = event.message.text.trim();
+  const isGroup = event.source.type !== "user";
+  const groupData = db.data.groups.find((g: any) => g.groupId === stateKey);
+  const userId = event.source.userId!;
+  const userData = db.data.users.find((u: UserData) => u.userId === userId);
 
-    songState[userId] = { genre: yearKey };
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", text: `${text.replace("年：", "")}年だね！` },
-        ...songDecisionButtons(),
-      ],
-    });
-    return;
-  }
 
-  // --- 遊び方の決定 ---
-  if (text === "③遊び方の提案") {
-    // 1. ルール名（キー）の配列を取得
-    const ruleKeys = Object.keys(gameRules);
-    
-    // 2. ルール名をランダムに1つ選択
-    const randomRuleTitle = ruleKeys[Math.floor(Math.random() * ruleKeys.length)];
-    
-    // 3. そのルール名に対応する説明文を取得
-    const ruleDescription = gameRules[randomRuleTitle];
 
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "text",
-          text: `こんな遊び方はどうかな？！！\n\n【${randomRuleTitle}】\n${ruleDescription}`,
-        },
-        { type: "text", text: "ほかにやってほしいことはある？" },
-        ...standardButtons(),
-      ],
-    });
-    return;
-  }
+  // ----------------------------------------
+  // --- グループ専用ロジック ---
+  // ----------------------------------------
+  if (isGroup) {
+    const getGroupMainMenu = (): line.messagingApi.Message[] => [{
+      type: "template", altText: "グループメニュー",
+      template: {
+        type: "buttons", text: "【グループメニュー】\nみんなで楽しもう！",
+        actions: [
+          { type: "message", label: "⚙️ メンバー管理", text: "メンバー管理" },
+          { type: "message", label: "🎤 順番の提案、確認", text: "順番の提案、確認" },
+          { type: "message", label: "🎵 共通曲の提案", text: "共通曲の提案" }, // 既存のロジックへ
+          { type: "message", label: "🎮 遊び方の提案", text: "遊び方の提案" }, // 既存のロジックへ
+        ]
+      }
+    }];
 
-  if (text === "④カラキンの説明") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        { type: "text", 
-          text:[
-            "カラキンはカラオケを盛り上げるためのBotだよ！",
-            "",
-            "僕に指示をしてくれたら、歌う順番や歌う曲、遊び方を提案するよ。",
-            "",
-            "ひとりの時も、みんなでいるときも、困ったら僕を頼ってね！",
-          ].join("\n"),
-        },
-        ...standardButtons(),
-      ],
-    });
-    return;
+    const getMemberAdminMenu = (info: string): line.messagingApi.Message[] => [
+      { type: "text", text: info },
+      { type: "template", altText: "管理メニュー",
+        template: {
+          type: "buttons", text: "メンバー管理",
+          actions: [
+            { type: "message", label: "👥 登録（開始）", text: "メンバー登録を開始" },
+            { type: "message", label: "👀 メンバー確認", text: "登録状況を確認" },
+            { type: "message", label: "♻️ リセット", text: "メンバーリセット" },
+            { type: "message", label: "↩️ 戻る", text: "メニュー" },
+          ]
+        }
+      }
+    ];
+
+    const getOrderMenu = (): line.messagingApi.Message[] => [{
+      type: "template", altText: "順番メニュー",
+      template: {
+        type: "buttons", text: "順番の提案・確認",
+        actions: [
+          { type: "message", label: "👤 ひとりで歌う", text: "ソロ順番提案" },
+          { type: "message", label: "👫 ペアで歌う", text: "ペア順番提案" },
+          { type: "message", label: "👀 今の順番を確認", text: "今の順番を確認" }, // ★追加
+          { type: "message", label: "↩️ 戻る", text: "メニュー" },
+        ]
+      }
+    }];
+
+    // --- ルート判定 ---
+    if (["カラキン", "メニュー", "管理終了", "戻る"].includes(text)) {
+      // ✅ ここで登録モードをOFFにする
+      await db.update((data: Data) => {
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) g.isRegistering = false;
+      });
+      return client.replyMessage({ replyToken: event.replyToken, messages: getGroupMainMenu() });
+    }
+
+    // --- 1. メンバー管理 階層 ---
+    if (text === "メンバー管理") {
+      return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu("メンバーの追加や確認ができます。") });
+    }
+
+    // 「登録を開始」を「追加受付」の挙動に変更
+    if (text === "メンバー登録を開始") {
+      let currentNames: string[] = [];
+      await db.update((data: Data) => {
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) {
+          // ★ここから [] (空にする処理) を削除しました
+          g.isRegistering = true; 
+          currentNames = g.memberNames;
+        } else {
+          data.groups.push({ groupId: stateKey, memberIds: [], memberNames: [], isRegistering: true });
+        }
+      });
+      
+      const info = currentNames.length > 0 
+        ? `【追加受付中】\n現在のメンバー：${currentNames.join("、")}\n\nさらに追加する人はスタンプを送ってね！`
+        : "【新規受付中】スタンプを送った人を登録するよ！";
+
+      return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu(info) });
+    }
+
+    // 現在のメンバー確認
+    if (text === "登録状況を確認") {
+      const names = groupData?.memberNames || [];
+      const listText = names.length > 0 ? names.join("、") : "まだ誰も登録されていません。";
+      
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: "flex",
+          altText: "メンバー確認",
+          contents: {
+            type: "bubble",
+            body: {
+              type: "box", layout: "vertical", contents: [
+                { type: "text", text: "👀 現在の登録メンバー", weight: "bold", size: "lg", color: "#1DB954" },
+                { type: "separator", margin: "md" },
+                { type: "text", text: `${names.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                { type: "text", text: listText, margin: "sm", wrap: true, size: "md" },
+                { type: "button", style: "primary", margin: "xl", color: "#1DB954", action: { type: "message", label: "✅ メニューに戻る", text: "メニュー" } }
+              ]
+            }
+          }
+        }]
+      });
+    }
+
+    // メンバーリセット（空にしたい時だけ明示的に使う）
+    if (text === "メンバーリセット") {
+      await db.update((data: Data) => {
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) {
+          g.memberIds = [];
+          g.memberNames = [];
+          g.isRegistering = false; // リセット時は受付も終了する
+        }
+      });
+      return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu("メンバーをリセットしました。") });
+    }
+
+    // --- 登録（追加）中の自動受付ロジック ---
+    if (groupData?.isRegistering && !["メンバー登録を開始", "登録状況を確認", "メンバーリセット", "メニュー"].includes(text)) {
+        const profile = await client.getProfile(userId);
+        let updatedNames: string[] = [];
+        let isNew = false;
+
+        await db.update((data: Data) => {
+          let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+          if (g && !g.memberIds.includes(userId)) {
+            g.memberIds.push(userId); 
+            g.memberNames.push(profile.displayName);
+            isNew = true;
+          }
+          if (g) updatedNames = g.memberNames;
+        });
+
+        // 新しい人が追加された時だけFlexを送る
+        if (isNew) {
+          return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [{
+              type: "flex",
+              altText: "メンバー更新",
+              contents: {
+                type: "bubble",
+                body: {
+                  type: "box", layout: "vertical", contents: [
+                    { type: "text", text: "👥 メンバー追加完了", weight: "bold", size: "lg", color: "#1DB954" },
+                    { type: "separator", margin: "md" },
+                    { type: "text", text: `現在 ${updatedNames.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                    { type: "text", text: updatedNames.join("、"), margin: "sm", wrap: true, size: "md" },
+                    { type: "button", style: "primary", margin: "xl", color: "#1DB954", action: { type: "message", label: "✅ 登録を終了してメニューへ", text: "メニュー" } }
+                  ]
+                }
+              }
+            }]
+          });
+        }
+        return; 
+    }
+
+    // --- 2. 順番の提案 階層 ---
+    if (text === "順番の提案、確認") {
+      // ✅ ここで登録モードをOFFにする
+      await db.update((data: Data) => {
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) g.isRegistering = false;
+      });
+      return client.replyMessage({ replyToken: event.replyToken, messages: getOrderMenu() });
+    }
+
+    // --- 順番提案ロジックの修正 ---
+    if (text === "ソロ順番提案") {
+      const names = groupData?.memberNames || [];
+      if (names.length === 0) return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "まずはメンバー登録をしてね！" }] });
+      
+      const shuffled = [...names].sort(() => Math.random() - 0.5);
+      const orderText = `🎤 ソロの順番：\n${shuffled.join(" → ")}`;
+
+      // ★結果を保存
+      await db.update((data: Data) => {
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) {
+          g.lastOrder = orderText;
+          g.lastTeams = []; // ★ ここでリセット！
+        }
+      });
+
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: orderText }, ...getOrderMenu()] });
+    }
+
+    if (text === "ペア順番提案") {
+      const ids = groupData?.memberIds || [];
+      const names = groupData?.memberNames || [];
+      
+      if (names.length < 2) {
+        return client.replyMessage({ 
+          replyToken: event.replyToken, 
+          messages: [{ type: "text", text: "ペアを作るには2人以上の登録が必要だよ！" }, ...getMemberAdminMenu("登録はこちら")] 
+        });
+      }
+
+      // --- 名前とIDをセットにしてシャッフル ---
+      // ★ name: string, i: number と型を明示
+      const combined = names.map((name: string, i: number) => ({ id: ids[i], name }));
+      combined.sort(() => Math.random() - 0.5);
+
+      // ★ c: {id: string, name: string} のように型を明示
+      const sIds = combined.map((c: { id: string; name: string }) => c.id);
+      const sNames = combined.map((c: { id: string; name: string }) => c.name);
+
+      let teamsTexts: string[] = [];
+      let teamsIds: string[][] = []; 
+
+      // --- チーム分けロジック ---
+      if (sNames.length === 3) {
+        teamsTexts.push(`🎵 ${sNames.join(" ＆ ")} (トリオ)`);
+        teamsIds.push([sIds[0], sIds[1], sIds[2]]);
+      } else {
+        for (let i = 0; i < sNames.length; i += 2) {
+          if (sNames.length - i === 3) {
+            teamsTexts.push(`🎵 ${sNames.slice(i).join(" ＆ ")} (トリオ)`);
+            teamsIds.push([sIds[i], sIds[i+1], sIds[i+2]]);
+            break;
+          } 
+          if (sNames[i + 1]) {
+            teamsTexts.push(`👫 ${sNames[i]} ＆ ${sNames[i + 1]}`);
+            teamsIds.push([sIds[i], sIds[i+1]]);
+          } else {
+            teamsTexts.push(`👤 ${sNames[i]} (ソロ)`);
+            teamsIds.push([sIds[i]]);
+          }
+        }
+      }
+
+      const orderText = `👫 チームの順番：\n${teamsTexts.join("\n")}`;
+
+      await db.update((data: Data) => {
+        // ★ x: GroupData と型を明示
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) {
+          g.lastOrder = orderText;
+          g.lastTeams = teamsIds; 
+        }
+      });
+
+      return client.replyMessage({ 
+        replyToken: event.replyToken, 
+        messages: [{ type: "text", text: orderText }, ...getOrderMenu()] 
+      });
+    }
+
+    // ★追加：今の順番を確認
+    if (text === "今の順番を確認") {
+      const orderText = groupData?.lastOrder || "まだ順番を決めていないよ！";
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: `【現在の順番】\n\n${orderText}` }, ...getOrderMenu()] });
+    }
+
+
+    if (text === "共通曲の提案" || text === "ペアに合う曲の提案") {
+      const teams = groupData?.lastTeams || [];
+      if (teams.length === 0) {
+        return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "まずは「順番の提案」でペアを決めてね！" }] });
+      }
+
+      let resultMessages: string[] = ["【ペア別の一致曲】"];
+
+      // db.data.users を直接参照します
+      const usersInDb = db.data.users;
+
+      teams.forEach((teamIds: string[], index: number) => {
+        // チーム全員のプロフィール名を取得
+        const teamMembers = teamIds.map(id => {
+          const u = usersInDb.find((x: UserData) => x.userId === id);
+          return { name: u?.displayName || "不明", songs: u?.mySongs || [] };
+        });
+
+        // 全員のリストに共通して存在する曲を抽出
+        let commonSongs = teamMembers[0].songs;
+        for (let i = 1; i < teamMembers.length; i++) {
+          commonSongs = commonSongs.filter((song: string) => teamMembers[i].songs.includes(song));
+        }
+
+        const memberNames = teamMembers.map(m => m.name).join("＆");
+        if (commonSongs.length > 0) {
+          resultMessages.push(`\n▼ ${memberNames}\n・${commonSongs.join("\n・")}`);
+        } else {
+          resultMessages.push(`\n▼ ${memberNames}\n（一致する曲がなかったよ…💦）`);
+        }
+      });
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: "text", text: resultMessages.join("\n") }, ...getGroupMainMenu()]
+      });
+    }
+
+    // 選曲提案
+    /*
+    if (text === "共通曲の提案") return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "template", altText: "選曲", template: { type: "buttons", text: "どう決める？", actions: [{ type: "message", label: "ランダム", text: "ランダム1曲"}, { type: "message", label: "ジャンル", text: "ジャンルから選ぶ"}, { type: "message", label: "年代", text: "年別ヒット曲から選ぶ"}] }}] });
+    if (text === "ジャンルから選ぶ") return client.replyMessage({ replyToken: event.replyToken, messages: genreButtons1() });
+    if (text === "ジャンル選択(他)") return client.replyMessage({ replyToken: event.replyToken, messages: genreButtons2() });
+    if (text.startsWith("ジャンル：")) { currentState.genreKey = genreMap[text]; return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: `${text.replace("ジャンル：","")}だね！` }, ...songDecisionButtons()] }); }
+    if (text === "年別ヒット曲から選ぶ") return client.replyMessage({ replyToken: event.replyToken, messages: [...yearButtons1(), ...yearButtons2()] });
+    if (text.startsWith("年代：")) {
+      const h = eraButtonHandlers[text.replace("年代：", "")];
+      if (h) return client.replyMessage({ replyToken: event.replyToken, messages: h() });
+    }
+    if (text.startsWith("年：")) { currentState.genreKey = yearMap[text]; return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: `${text.replace("年：", "")}年だね！` }, ...songDecisionButtons()] }); }
+    if (text === "1曲に決める" && currentState.genreKey) {
+      const list = (songs as any)[currentState.genreKey];
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: `決定！🎵 ${list[Math.floor(Math.random()*list.length)]}` }] });
+    }
+    if (text === "候補を出す" && currentState.genreKey) {
+      const list = (songs as any)[currentState.genreKey]; const c = [...list].sort(() => Math.random() - 0.5).slice(0, 3);
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: `候補：\n${c.join("\n")}` }, ...songAfterCandidateButtons()] });
+    }*/
+    if (text === "遊び方の提案") {
+      const ks = Object.keys(gameRules); const t = ks[Math.floor(Math.random()*ks.length)];
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: `【${t}】\n${gameRules[t]}` }, ...getGroupMainMenu()] });
+    }
+  } 
+
+  
+  //---------------------------------
+  // --- 個人専用ロジック ---
+  //---------------------------------
+  else {
+    const getMainMenu = (): line.messagingApi.Message[] => [{
+      type: "template", altText: "個人メニュー",
+      template: {
+        type: "buttons", text: "【個人メニュー】\n何をする？",
+        actions: [
+          { type: "message", label: "🎵 曲の登録", text: "曲の登録" },
+          { type: "message", label: "📋 マイリストの確認、編集", text: "マイリストの確認、編集" },
+          { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
+        ]
+      }
+    }];
+
+    const getRegMenu = (infoText: string): line.messagingApi.Message[] => [
+      { type: "text", text: infoText },
+      { type: "template", altText: "登録中メニュー",
+        template: {
+          type: "buttons", text: "リストの操作や確認はこちらから",
+          actions: [
+            { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+            { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+            { type: "message", label: "✅ 登録終了", text: "登録終了" },
+          ]
+        }
+      }
+    ];
+
+    // マイリスト管理用メニュー（Flex または Buttons）
+    const getMyListMenu = (): line.messagingApi.Message[] => [{
+      type: "template",
+      altText: "マイリスト管理メニュー",
+      template: {
+        type: "buttons",
+        text: "マイリスト管理",
+        actions: [
+          { type: "message", label: "📋 リストを確認する", text: "マイリスト確認" },
+          { type: "message", label: "✂️ リストを編集する", text: "マイリスト編集" },
+          { type: "message", label: "🏠 戻る", text: "メニュー" }
+        ]
+      }
+    }];
+
+    // --- 1. 最優先：メニューに戻る・終了する処理 ---
+    if (["カラキン", "メニュー", "登録終了", "戻る"].includes(text)) {
+      await db.update((data: Data) => {
+        let u = data.users.find((x: UserData) => x.userId === userId);
+        if (u) u.isRegisteringSong = false;
+      });
+      return client.replyMessage({ replyToken: event.replyToken, messages: getMainMenu() });
+    }
+
+    // --- 2. 子階層：曲の登録モード開始 ---
+    if (text === "曲の登録") {
+      const profile = await client.getProfile(userId);
+      await db.update((data: Data) => {
+        let u = data.users.find((x: UserData) => x.userId === userId);
+        if (!u) data.users.push({ userId, displayName: profile.displayName, mySongs: [], isRegisteringSong: true });
+        else u.isRegisteringSong = true;
+      });
+      return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu("【曲の登録】\n登録したい曲名や歌手名を入力して送ってね！") });
+    }
+
+    // --- 3. 登録モード中の処理 ---
+    if (userData?.isRegisteringSong) {
+      if (text === "一曲消す") {
+        await db.update((data: Data) => {
+          let u = data.users.find((x: UserData) => x.userId === userId);
+          if (u && u.mySongs.length > 0) u.mySongs.pop();
+        });
+        return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu("直前の1曲を消したよ！") });
+      }
+
+      if (text === "リスト確認") {
+        const listText = userData.mySongs.length > 0 ? `【現在のリスト】\n・${userData.mySongs.join("\n・")}` : "登録はまだないよ！";
+        return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu(listText) });
+      }
+
+      // ガード
+      if (text === "曲の登録") return;
+
+      let displaySongs: any[] = [];
+      let currentIndex = 0;
+
+      // 「次へ」ボタンが押された場合
+      if (text === "次の5曲を表示" && currentState.searchCache) {
+        // キャッシュから次の5件を特定するために、現在の位置を特定（簡易的に現在のキャッシュから次の5つを取得）
+        // ここでは state に「今何番目か」を持たせるのが確実です
+        // 便宜上、毎回ランダムではなく「前回の続き」を出すロジックにします
+        currentIndex = (currentState as any).currentIndex || 0;
+        currentIndex += 5;
+        displaySongs = currentState.searchCache.slice(currentIndex, currentIndex + 5);
+        (currentState as any).currentIndex = currentIndex;
+      } else {
+        // 新規検索の場合
+        const allCandidates = await searchSongs(text);
+        if (allCandidates.length === 0) {
+          return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu(`「${text}」は見つからなかったよ💦`) });
+        }
+        // キャッシュに50件保存し、最初の5件を出す
+        currentState.searchCache = allCandidates;
+        currentState.lastQuery = text;
+        (currentState as any).currentIndex = 0;
+        displaySongs = allCandidates.slice(0, 5);
+      }
+
+      // --- 検索結果の各アイテムを作成 ---
+      const songItems = displaySongs.map((c: any) => {
+        // ★重要：現在のユーザーがすでに持っている曲か判定
+        const isAdded = userData?.mySongs.includes(c.fullName);
+
+        return {
+          type: "box", layout: "horizontal", margin: "lg", contents: [
+            { type: "box", layout: "vertical", flex: 4, contents: [
+              // 登録済みなら曲名を少し薄い色にする
+              { type: "text", text: c.trackName, weight: "bold", wrap: true, color: isAdded ? "#aaaaaa" : "#000000" },
+              { type: "text", text: c.artistName, size: "xs", color: "#888888" }
+            ]},
+            { 
+              type: "button", 
+              // 登録済みならボタンをグレー(secondary)、未登録なら青(primary)に
+              style: isAdded ? "secondary" : "primary", 
+              height: "sm", flex: 2, 
+              action: { 
+                type: "postback", 
+                // すでに登録済みの場合は「済」と表示し、dataを "ignore" にして誤爆を防ぐ
+                label: isAdded ? "登録済" : "登録", 
+                data: isAdded ? "ignore" : `save:${c.fullName}`, 
+                displayText: isAdded ? `「${c.fullName}」を登録！` : `✅ ${c.fullName} を登録！` 
+              }
+            }
+          ]
+        };
+      });
+
+      // 「次へ」ボタンを表示するか（キャッシュに残りの曲がある場合のみ）
+      const footerContents = [];
+      if (currentState.searchCache && (currentIndex + 5) < currentState.searchCache.length) {
+        footerContents.push({ type: "separator", margin: "xl" });
+        footerContents.push({
+          type: "button", style: "secondary", margin: "md",
+          action: { type: "message", label: "🔍 次の5曲を表示", text: "次の5曲を表示" }
+        });
+      }
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          {
+            type: "flex", altText: "検索結果",
+            contents: {
+              type: "bubble",
+              body: {
+                type: "box", layout: "vertical",
+                contents: [
+                  { type: "text", text: `🎵 ${currentState.lastQuery} (${currentIndex + 1}〜${currentIndex + 5}位)`, weight: "bold", size: "md", color: "#1DB954" },
+                  ...songItems as any,
+                  ...footerContents as any
+                ]
+              }
+            }
+          },
+          ...getRegMenu(currentIndex > 0 ? "もっと候補を出したよ！" : "お目当ての曲はあるかな？")
+        ]
+      });
+    }
+
+    // --- マイリスト管理（入り口） ---
+    if (text === "マイリストの確認、編集") {
+      return client.replyMessage({ replyToken: event.replyToken, messages: getMyListMenu() });
+    }
+
+    // --- 📋 確認のみ ---
+    if (text === "マイリスト確認") {
+      const listText = userData?.mySongs.length ? `【現在のリスト】\n・${userData.mySongs.join("\n・")}` : "登録はないよ！";
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: listText }, ...getMyListMenu()] });
+    }
+
+    // --- ✂️ 編集モード（削除ボタン付きリスト） ---
+    if (text === "マイリスト編集") {
+      const mySongs = userData?.mySongs || [];
+      if (mySongs.length === 0) {
+        return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "消せる曲がないよ！" }, ...getMyListMenu()] });
+      }
+
+      // 各曲に削除ボタンをつけたFlex Messageの要素を作成
+      const songEditItems = mySongs.map((song: string) => ({
+        type: "box", layout: "horizontal", margin: "md", contents: [
+          { type: "text", text: song, flex: 4, size: "sm", gravity: "center", wrap: true },
+          { 
+            type: "button", style: "secondary", color: "#FF6B6B", height: "sm", flex: 2,
+            action: { 
+              type: "postback", 
+              label: "削除", 
+              data: `delete:${song}`, 
+              displayText: `🗑️「${song}」を削除する` 
+            }
+          }
+        ]
+      }));
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: "flex", altText: "マイリスト編集",
+          contents: {
+            type: "bubble",
+            header: { type: "box", layout: "vertical", contents: [{ type: "text", text: "曲をタップして削除", weight: "bold", size: "md" }] },
+            body: { type: "box", layout: "vertical", contents: songEditItems }
+          }
+        }, ...getMyListMenu()]
+      });
+    }
+
+    if (text === "カラキンの説明") {
+      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "カラキンは歌本管理と選曲を助けるBotだよ！" }, ...getMainMenu()] });
+    }
   }
 }
 
-function main() {
-  const channelSecret = env.CHANNEL_SECRET;
-  const channelAccessToken = env.CHANNEL_ACCESS_TOKEN;
-  assert(channelSecret && channelAccessToken);
-
-  const client = new MessagingApiClient({ channelAccessToken });
-
+async function main() {
+  const db = await JSONFilePreset<Data>('db.json', defaultData);
+  const client = new MessagingApiClient({ channelAccessToken: env.CHANNEL_ACCESS_TOKEN! });
   const app = express();
-  app.post("/", line.middleware({ channelSecret }), (req, res) => {
+  app.post("/", line.middleware({ channelSecret: env.CHANNEL_SECRET! }), (req, res) => {
+    res.sendStatus(200); 
     const { events } = req.body as { events: line.WebhookEvent[] };
-    res.sendStatus(200);
-    events.forEach((e) => handleEvent(client, e));
+    events.forEach(e => handleEvent(client, e, db));
   });
-
-  http.createServer(app).listen(21153, () => {
-    console.log("ポート21153で起動しました");
-  });
+  http.createServer(app).listen(21153, () => console.log("カラキンReady"));
 }
-
 main();

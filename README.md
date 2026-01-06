@@ -1,1 +1,1 @@
-# LINEBot-test
+2つターミナルを開いて、片方で npm run start-ngrok を実行（ターミナルA）、もう片方で npm run start を実行（ターミナルB）する。 ngrokは最初に一回動かしてあとは放置で良い。 コードを変更してそれを実行するときは、ターミナルBで動いているボットを Ctrl+C で終了して、 npm run start を実行し直す。 ngrokは再起動するたびにURLが変わるので、変わるたびにボットの設定画面でWebhook URLを書き換えないといけない。
