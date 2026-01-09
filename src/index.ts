@@ -67,8 +67,8 @@ function startMessages(): line.messagingApi.Message[] {
     {
       type: "image",
       // HTTPSの直リンクである必要があります
-      originalContentUrl: "https://photos.app.goo.gl/f6jtWpPmhfGY2x3C8", 
-      previewImageUrl: "https://photos.app.goo.gl/f6jtWpPmhfGY2x3C8"
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_i1zbbmi1zbbmi1zb%20(2)%20(1)%20(1)%20(1).png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_i1zbbmi1zbbmi1zb%20(2)%20(1)%20(1)%20(1).png?raw=true"
     },
     { type: "template", altText: "グループメニュー",
       template: {
