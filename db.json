@@ -89,8 +89,7 @@
         "TSUNAMI / サザンオールスターズ",
         "真夏の果実 / サザンオールスターズ",
         "涙のキッス / サザンオールスターズ",
-        "勝手にシンドバッド / サザンオールスターズ",
-        "いとしのエリー / サザンオールスターズ"
+        "勝手にシンドバッド / サザンオールスターズ"
       ],
       "isRegisteringSong": false
     },
@@ -290,19 +289,22 @@
     {
       "groupId": "C5ca126157f286c8d67c6868ffb597663",
       "memberIds": [
+        "U129d131de568026f6ab42fd2a0aef2ea",
         "U34284e7ea622bffcc925d1d84f8cff17",
-        "U129d131de568026f6ab42fd2a0aef2ea"
+        "Ud6394d4517cedf2d53be6482545bb47a"
       ],
       "memberNames": [
+        "れん",
         "よしき",
-        "れん"
+        "西祐翔"
       ],
       "isRegistering": false,
-      "lastOrder": "👫 チームの順番：\n👫 れん ＆ よしき",
+      "lastOrder": "👫 チームの順番：\n🎵 れん ＆ よしき ＆ 西祐翔 (トリオ)",
       "lastTeams": [
         [
           "U129d131de568026f6ab42fd2a0aef2ea",
-          "U34284e7ea622bffcc925d1d84f8cff17"
+          "U34284e7ea622bffcc925d1d84f8cff17",
+          "Ud6394d4517cedf2d53be6482545bb47a"
         ]
       ]
     },

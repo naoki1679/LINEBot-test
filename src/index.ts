@@ -414,8 +414,8 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       });
       
       const info = currentNames.length > 0 
-        ? `【追加受付中】\n現在のメンバー：${currentNames.join("、")}\n\nさらに追加する人はスタンプを送ってね！`
-        : "【新規受付中】コメントを送った人を登録するよ！";
+        ? `【追加受付中】\n現在のメンバー：${currentNames.join("、")}\n\nさらに追加する人はメッセージを送ってね！`
+        : "【新規受付中】メッセージを送った人を登録するよ！";
 
       return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu(info) });
     }
