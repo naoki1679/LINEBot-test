@@ -64,10 +64,22 @@ function startMessages(): line.messagingApi.Message[] {
   return [
     { type: "text", text: "カラキンだよ！歌う順番や曲を提案して、カラオケを盛り上げるよ！🎵" },
     { type: "text", text: "⚠️カラキンを使うためには、メンバーみんなが”カラキン”を友だち登録していないといけないよ！！" },
-    { type: "template", altText: "メインメニュー", template: { type: "buttons", text: "友だち登録が済んだら、まずはメニューを選んでね", actions: [
-      { type: "message", label: "⚙️ メニューを表示", text: "メニュー" },
-      { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
-    ]}}
+    {
+      type: "image",
+      // HTTPSの直リンクである必要があります
+      originalContentUrl: "https://photos.app.goo.gl/f6jtWpPmhfGY2x3C8", 
+      previewImageUrl: "https://photos.app.goo.gl/f6jtWpPmhfGY2x3C8"
+    },
+    { type: "template", altText: "グループメニュー",
+      template: {
+        type: "buttons", text: "【グループメニュー】\nみんなで楽しもう！",
+        actions: [
+          { type: "message", label: "⚙️ メンバー管理", text: "メンバー管理" },
+          { type: "message", label: "🎤 順番の提案、確認", text: "順番の提案、確認" },
+          { type: "message", label: "🎵 共通曲の提案", text: "共通曲の提案" }, // 既存のロジックへ
+          { type: "message", label: "🎮 遊び方の提案", text: "遊び方の提案" }, // 既存のロジックへ
+        ]
+      }}
   ];
 }
 
