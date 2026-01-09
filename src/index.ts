@@ -83,8 +83,15 @@ function startMessages(): line.messagingApi.Message[] {
   ];
 }
 
-const getPrivateMenu = (): line.messagingApi.Message[] => [{
-      type: "template", altText: "個人メニュー",
+function getPrivateMenu(): line.messagingApi.Message[] {
+  return [
+    {
+      type: "image",
+      // HTTPSの直リンクである必要があります
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_qk90cyqk90cyqk90%20(1)%20(1)%20(1)%20(1).png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_qk90cyqk90cyqk90%20(1)%20(1)%20(1)%20(1).png?raw=true"
+    },
+    {type: "template", altText: "個人メニュー",
       template: {
         type: "buttons", text: "【個人メニュー】\n何をする？",
         actions: [
@@ -93,7 +100,9 @@ const getPrivateMenu = (): line.messagingApi.Message[] => [{
           { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
         ]
       }
-    }];
+    }
+  ];
+}
 
 function songDecisionButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "決定", template: { type: "buttons", text: "どうする？", actions: [{ type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "候補を出す", text: "候補を出す" }] } }]; }
 function songAfterCandidateButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "候補", template: { type: "buttons", text: "どうかな？", actions: [{ type: "message", label: "もう一度候補", text: "候補を出す" }, { type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "決まった", text: "決まった" }] } }]; }
