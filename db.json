@@ -254,6 +254,31 @@
       "displayName": "abc",
       "mySongs": [],
       "isRegisteringSong": true
+    },
+    {
+      "userId": "Uc7f749602974a98cbb22326278dd25f9",
+      "displayName": "直希",
+      "mySongs": [
+        "ray / BUMP OF CHICKEN"
+      ],
+      "isRegisteringSong": true
+    },
+    {
+      "userId": "Uab5a4d0b1c010c51093cf1dddde0e384",
+      "displayName": "ゆうと",
+      "mySongs": [
+        "夜に駆ける / YOASOBI",
+        "怪獣 / サカナクション"
+      ],
+      "isRegisteringSong": false
+    },
+    {
+      "userId": "U39cd8d1ae0dfd88b07e74feb4014132e",
+      "displayName": "IsobeTaiyo",
+      "mySongs": [
+        "新宝島 / サカナクション"
+      ],
+      "isRegisteringSong": true
     }
   ],
   "groups": [
@@ -291,20 +316,25 @@
       "memberIds": [
         "U129d131de568026f6ab42fd2a0aef2ea",
         "U34284e7ea622bffcc925d1d84f8cff17",
-        "Ud6394d4517cedf2d53be6482545bb47a"
+        "Ud6394d4517cedf2d53be6482545bb47a",
+        "U1834e55575a534794e3baebfe5d82468"
       ],
       "memberNames": [
         "れん",
         "よしき",
-        "西祐翔"
+        "西祐翔",
+        "市村直輝"
       ],
       "isRegistering": false,
-      "lastOrder": "👫 チームの順番：\n🎵 れん ＆ よしき ＆ 西祐翔 (トリオ)",
+      "lastOrder": "👫 チームの順番：\n👫 よしき ＆ 西祐翔\n👫 市村直輝 ＆ れん",
       "lastTeams": [
         [
-          "U129d131de568026f6ab42fd2a0aef2ea",
           "U34284e7ea622bffcc925d1d84f8cff17",
           "Ud6394d4517cedf2d53be6482545bb47a"
+        ],
+        [
+          "U1834e55575a534794e3baebfe5d82468",
+          "U129d131de568026f6ab42fd2a0aef2ea"
         ]
       ]
     },
@@ -335,6 +365,27 @@
           "Ud492094d630526fc97810fa82f4c6756",
           "U1834e55575a534794e3baebfe5d82468",
           "Udba08c2f10abd19ed752970fc13ebd5b"
+        ]
+      ]
+    },
+    {
+      "groupId": "Ca2487f606333df2d1e499aaee8a0c136",
+      "memberIds": [],
+      "memberNames": [],
+      "isRegistering": false,
+      "lastOrder": "👫 チームの順番：\n👫 河名 たすく ＆ 西祐翔\n👫 ゆうと ＆ IsobeTaiyo\n👫 直希 ＆ Atsushi",
+      "lastTeams": [
+        [
+          "Ua21a9c43dd8ad3ad8fc3a6554247e906",
+          "Ud6394d4517cedf2d53be6482545bb47a"
+        ],
+        [
+          "Uab5a4d0b1c010c51093cf1dddde0e384",
+          "U39cd8d1ae0dfd88b07e74feb4014132e"
+        ],
+        [
+          "Uc7f749602974a98cbb22326278dd25f9",
+          "Ua3bb9fdc3af35465d19029ae91993d81"
         ]
       ]
     }
