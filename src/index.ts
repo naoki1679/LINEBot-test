@@ -71,6 +71,18 @@ function startMessages(): line.messagingApi.Message[] {
   ];
 }
 
+const getPrivateMenu = (): line.messagingApi.Message[] => [{
+      type: "template", altText: "個人メニュー",
+      template: {
+        type: "buttons", text: "【個人メニュー】\n何をする？",
+        actions: [
+          { type: "message", label: "🎵 曲の登録", text: "曲の登録" },
+          { type: "message", label: "📋 マイリストの確認、編集", text: "マイリストの確認、編集" },
+          { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
+        ]
+      }
+    }];
+
 function songDecisionButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "決定", template: { type: "buttons", text: "どうする？", actions: [{ type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "候補を出す", text: "候補を出す" }] } }]; }
 function songAfterCandidateButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "候補", template: { type: "buttons", text: "どうかな？", actions: [{ type: "message", label: "もう一度候補", text: "候補を出す" }, { type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "決まった", text: "決まった" }] } }]; }
 function genreButtons1(): line.messagingApi.Message[] { return [{ type: "template", altText: "G1", template: { type: "buttons", text: "どのジャンルにする？", actions: [{ type: "message", label: "JPOP", text: "ジャンル：JPOP" }, { type: "message", label: "ロック", text: "ジャンル：ロック" }, { type: "message", label: "アニメ", text: "ジャンル：アニメ" }, { type: "message", label: "他...", text: "ジャンル選択(他)" }] } }]; }
@@ -99,8 +111,12 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
   const currentState = tempStates[stateKey] || (tempStates[stateKey] = {});
 
   // A. 自動挨拶イベント
-  if (event.type === "follow" || event.type === "join") {
+  if (event.type === "join") {
     return client.replyMessage({ replyToken: event.replyToken, messages: startMessages() });
+  }
+
+  if (event.type === "follow") {
+    return client.replyMessage({ replyToken: event.replyToken, messages: getPrivateMenu() });
   }
 
   // B. ポストバック（検索結果の登録）

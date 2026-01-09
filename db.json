@@ -56,7 +56,7 @@
         "踊り子 / Vaundy",
         "タイムパラドックス / Vaundy"
       ],
-      "isRegisteringSong": true
+      "isRegisteringSong": false
     },
     {
       "userId": "U129d131de568026f6ab42fd2a0aef2ea",
@@ -290,19 +290,18 @@
     {
       "groupId": "C5ca126157f286c8d67c6868ffb597663",
       "memberIds": [
-        "Ua3bb9fdc3af35465d19029ae91993d81",
-        "U34284e7ea622bffcc925d1d84f8cff17"
+        "U34284e7ea622bffcc925d1d84f8cff17",
+        "U129d131de568026f6ab42fd2a0aef2ea"
       ],
       "memberNames": [
-        "Atsushi",
-        "よしき"
+        "よしき",
+        "れん"
       ],
-      "isRegistering": true,
-      "lastOrder": "👫 チームの順番：\n🎵 市村直輝 ＆ Atsushi ＆ よしき (トリオ)",
+      "isRegistering": false,
+      "lastOrder": "👫 チームの順番：\n👫 れん ＆ よしき",
       "lastTeams": [
         [
-          "U1834e55575a534794e3baebfe5d82468",
-          "Ua3bb9fdc3af35465d19029ae91993d81",
+          "U129d131de568026f6ab42fd2a0aef2ea",
           "U34284e7ea622bffcc925d1d84f8cff17"
         ]
       ]
