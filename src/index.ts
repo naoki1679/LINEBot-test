@@ -63,7 +63,8 @@ async function searchSongs(query: string) {
 function startMessages(): line.messagingApi.Message[] {
   return [
     { type: "text", text: "カラキンだよ！歌う順番や曲を提案して、カラオケを盛り上げるよ！🎵" },
-    { type: "template", altText: "メインメニュー", template: { type: "buttons", text: "まずはメニューを選んでね", actions: [
+    { type: "text", text: "⚠️カラキンを使うためには、メンバーみんなが”カラキン”を友だち登録していないといけないよ！！" },
+    { type: "template", altText: "メインメニュー", template: { type: "buttons", text: "友だち登録が済んだら、まずはメニューを選んでね", actions: [
       { type: "message", label: "⚙️ メニューを表示", text: "メニュー" },
       { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
     ]}}
@@ -377,7 +378,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       
       const info = currentNames.length > 0 
         ? `【追加受付中】\n現在のメンバー：${currentNames.join("、")}\n\nさらに追加する人はスタンプを送ってね！`
-        : "【新規受付中】スタンプを送った人を登録するよ！";
+        : "【新規受付中】コメントを送った人を登録するよ！";
 
       return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu(info) });
     }
@@ -422,13 +423,30 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     }
 
     // --- 登録（追加）中の自動受付ロジック ---
+    // --- 登録（追加）中の自動受付ロジック ---
     if (groupData?.isRegistering && !["メンバー登録を開始", "登録状況を確認", "メンバーリセット", "メニュー"].includes(text)) {
-        const profile = await client.getProfile(userId);
+        let profile;
+        try {
+          // ★ プロフィール取得を試みる
+          profile = await client.getProfile(userId);
+        } catch (error) {
+          // ★ 友達登録していない場合、ここでエラーをキャッチして警告を出す
+          return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [{ 
+              type: "text", 
+              text: "⚠️ メンバー登録ができなかったよ！\n\nカラキン を「追加（友達登録）」してから、もう一度メッセージを送ってね！" 
+            }]
+          });
+        }
+
+        // --- 以下、友達登録されている場合の正常処理 ---
         let updatedNames: string[] = [];
         let isNew = false;
 
         await db.update((data: Data) => {
           let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+          // profile.displayName を安全に使用
           if (g && !g.memberIds.includes(userId)) {
             g.memberIds.push(userId); 
             g.memberNames.push(profile.displayName);
@@ -437,7 +455,6 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
           if (g) updatedNames = g.memberNames;
         });
 
-        // 新しい人が追加された時だけFlexを送る
         if (isNew) {
           return client.replyMessage({
             replyToken: event.replyToken,
@@ -691,6 +708,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     }
 
     // --- 3. 登録モード中の処理 ---
+    // --- 3. 登録モード中の処理 ---
     if (userData?.isRegisteringSong) {
       if (text === "一曲消す") {
         await db.update((data: Data) => {
@@ -711,64 +729,78 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       let displaySongs: any[] = [];
       let currentIndex = 0;
 
-      // 「次へ」ボタンが押された場合
-      if (text === "次の5曲を表示" && currentState.searchCache) {
-        // キャッシュから次の5件を特定するために、現在の位置を特定（簡易的に現在のキャッシュから次の5つを取得）
-        // ここでは state に「今何番目か」を持たせるのが確実です
-        // 便宜上、毎回ランダムではなく「前回の続き」を出すロジックにします
+      // --- ページング判定 (次へ・前へ) ---
+      const isPaging = text === "次の5曲を表示" || text === "前の5曲を表示";
+      
+      if (isPaging && currentState.searchCache) {
         currentIndex = (currentState as any).currentIndex || 0;
-        currentIndex += 5;
+        
+        if (text === "次の5曲を表示") {
+          currentIndex += 5;
+        } else {
+          currentIndex -= 5;
+        }
+
+        // 範囲外ガード
+        if (currentIndex < 0) currentIndex = 0;
         displaySongs = currentState.searchCache.slice(currentIndex, currentIndex + 5);
         (currentState as any).currentIndex = currentIndex;
+
       } else {
         // 新規検索の場合
         const allCandidates = await searchSongs(text);
         if (allCandidates.length === 0) {
           return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu(`「${text}」は見つからなかったよ💦`) });
         }
-        // キャッシュに50件保存し、最初の5件を出す
         currentState.searchCache = allCandidates;
         currentState.lastQuery = text;
+        currentIndex = 0;
         (currentState as any).currentIndex = 0;
         displaySongs = allCandidates.slice(0, 5);
       }
 
-      // --- 検索結果の各アイテムを作成 ---
+      // --- 検索結果のアイテム作成 ---
       const songItems = displaySongs.map((c: any) => {
-        // ★重要：現在のユーザーがすでに持っている曲か判定
         const isAdded = userData?.mySongs.includes(c.fullName);
-
         return {
           type: "box", layout: "horizontal", margin: "lg", contents: [
             { type: "box", layout: "vertical", flex: 4, contents: [
-              // 登録済みなら曲名を少し薄い色にする
               { type: "text", text: c.trackName, weight: "bold", wrap: true, color: isAdded ? "#aaaaaa" : "#000000" },
               { type: "text", text: c.artistName, size: "xs", color: "#888888" }
             ]},
             { 
-              type: "button", 
-              // 登録済みならボタンをグレー(secondary)、未登録なら青(primary)に
-              style: isAdded ? "secondary" : "primary", 
-              height: "sm", flex: 2, 
+              type: "button", style: isAdded ? "secondary" : "primary", height: "sm", flex: 2,
               action: { 
                 type: "postback", 
-                // すでに登録済みの場合は「済」と表示し、dataを "ignore" にして誤爆を防ぐ
                 label: isAdded ? "登録済" : "登録", 
-                data: isAdded ? "ignore" : `save:${c.fullName}`, 
-                displayText: isAdded ? `「${c.fullName}」を登録！` : `✅ ${c.fullName} を登録！` 
+                data: isAdded ? "ignore" : `save:${c.fullName}`,
+                displayText: isAdded ? `「${c.fullName}」を登録！` : `✅ ${c.fullName} を登録！`
               }
             }
           ]
         };
       });
 
-      // 「次へ」ボタンを表示するか（キャッシュに残りの曲がある場合のみ）
-      const footerContents = [];
+      // --- フッターボタンの作成 (ここがエラーの修正ポイント) ---
+      const pagingButtons: any[] = [];
+      if (currentIndex > 0) {
+        pagingButtons.push({
+          type: "button", style: "secondary", height: "sm", margin: "sm",
+          action: { type: "message", label: "◀️ 前の5曲", text: "前の5曲を表示" }
+        });
+      }
       if (currentState.searchCache && (currentIndex + 5) < currentState.searchCache.length) {
-        footerContents.push({ type: "separator", margin: "xl" });
-        footerContents.push({
-          type: "button", style: "secondary", margin: "md",
-          action: { type: "message", label: "🔍 次の5曲を表示", text: "次の5曲を表示" }
+        pagingButtons.push({
+          type: "button", style: "secondary", height: "sm", margin: "sm",
+          action: { type: "message", label: "次の5曲 ▶️", text: "次の5曲を表示" }
+        });
+      }
+
+      const searchResultFooter = []; // 名前を固有のものに変更して再宣言エラーを回避
+      if (pagingButtons.length > 0) {
+        searchResultFooter.push({ type: "separator", margin: "xl" });
+        searchResultFooter.push({
+          type: "box", layout: "horizontal", spacing: "md", contents: pagingButtons
         });
       }
 
@@ -784,7 +816,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                 contents: [
                   { type: "text", text: `🎵 ${currentState.lastQuery} (${currentIndex + 1}〜${currentIndex + 5}位)`, weight: "bold", size: "md", color: "#1DB954" },
                   ...songItems as any,
-                  ...footerContents as any
+                  ...searchResultFooter as any
                 ]
               }
             }
@@ -805,39 +837,91 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: listText }, ...getMyListMenu()] });
     }
 
-    // --- ✂️ 編集モード（削除ボタン付きリスト） ---
-    if (text === "マイリスト編集") {
+    // --- ✂️ マイリスト編集・表示（前後ページング対応） ---
+    const isMyListText = ["マイリスト編集", "次のマイリストを表示", "前のマイリストを表示"].includes(text);
+    
+    if (isMyListText) {
       const mySongs = userData?.mySongs || [];
       if (mySongs.length === 0) {
-        return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "消せる曲がないよ！" }, ...getMyListMenu()] });
+        return client.replyMessage({ 
+          replyToken: event.replyToken, 
+          messages: [{ type: "text", text: "登録されている曲がないよ！" }, ...getMainMenu()] 
+        });
       }
 
-      // 各曲に削除ボタンをつけたFlex Messageの要素を作成
-      const songEditItems = mySongs.map((song: string) => ({
+      // --- 1. インデックスの計算 ---
+      let currentIndex = (currentState as any).listIndex || 0;
+      if (text === "次のマイリストを表示") {
+        currentIndex += 5;
+      } else if (text === "前のマイリストを表示") {
+        currentIndex -= 5;
+      } else {
+        currentIndex = 0;
+      }
+
+      if (currentIndex < 0) currentIndex = 0;
+      if (currentIndex >= mySongs.length) currentIndex = Math.floor((mySongs.length - 1) / 5) * 5;
+      (currentState as any).listIndex = currentIndex;
+
+      // --- 2. リストアイテム（曲名と削除ボタン）の作成 ---
+      const displaySongs = mySongs.slice(currentIndex, currentIndex + 5);
+      const songEditItems = displaySongs.map((song: string) => ({
         type: "box", layout: "horizontal", margin: "md", contents: [
           { type: "text", text: song, flex: 4, size: "sm", gravity: "center", wrap: true },
           { 
             type: "button", style: "secondary", color: "#FF6B6B", height: "sm", flex: 2,
-            action: { 
-              type: "postback", 
-              label: "削除", 
-              data: `delete:${song}`, 
-              displayText: `🗑️「${song}」を削除する` 
-            }
+            action: { type: "postback", label: "削除", data: `delete:${song}` }
           }
         ]
       }));
 
+      // --- 3. フッターボタン（前へ・次へ）の作成 ---
+      const footerButtons: any[] = [];
+      if (currentIndex > 0) {
+        footerButtons.push({
+          type: "button", style: "secondary", height: "sm", margin: "sm",
+          action: { type: "message", label: "◀️ 前へ", text: "前のマイリストを表示" }
+        });
+      }
+      if (mySongs.length > currentIndex + 5) {
+        footerButtons.push({
+          type: "button", style: "secondary", height: "sm", margin: "sm",
+          action: { type: "message", label: "次へ ▶️", text: "次のマイリストを表示" }
+        });
+      }
+
+      const myListFooter = []; // searchFooter と被らない名前
+      if (footerButtons.length > 0) {
+        myListFooter.push({ type: "separator", margin: "xl" });
+        myListFooter.push({
+          type: "box", layout: "horizontal", spacing: "md", contents: footerButtons
+        });
+      }
+
+      // --- 4. メッセージ送信 ---
       return client.replyMessage({
         replyToken: event.replyToken,
-        messages: [{
-          type: "flex", altText: "マイリスト編集",
-          contents: {
-            type: "bubble",
-            header: { type: "box", layout: "vertical", contents: [{ type: "text", text: "曲をタップして削除", weight: "bold", size: "md" }] },
-            body: { type: "box", layout: "vertical", contents: songEditItems }
-          }
-        }, ...getMyListMenu()]
+        messages: [
+          {
+            type: "flex", altText: "マイリスト管理",
+            contents: {
+              type: "bubble",
+              body: {
+                type: "box", layout: "vertical",
+                contents: [
+                  { 
+                    type: "text", 
+                    text: `📋 マイリスト (${currentIndex + 1}〜${Math.min(currentIndex + 5, mySongs.length)} / ${mySongs.length}曲)`, 
+                    weight: "bold", size: "md", color: "#1DB954" 
+                  },
+                  ...songEditItems as any, // 編集用のアイテムを展開
+                  ...myListFooter as any   // 前へ・次へボタンを展開
+                ]
+              }
+            }
+          },
+          ...getMyListMenu() // マイリスト用のメニューを表示
+        ]
       });
     }
 
