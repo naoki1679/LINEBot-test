@@ -13,7 +13,8 @@ const { MessagingApiClient } = line.messagingApi;
 type UserData = {
   userId: string;
   displayName: string;
-  mySongs: string[];
+  mySongs: string[]; // "曲名 / アーティスト名"のリスト
+  myArtists: string[]; // ★追加：アーティスト名だけのリスト
   isRegisteringSong?: boolean; 
 };
 
@@ -48,7 +49,7 @@ function getStateKey(event: line.WebhookEvent): string {
 
 async function searchSongs(query: string) {
   try {
-    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&country=jp&lang=ja_jp&media=music&limit=50`;
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&country=jp&lang=ja_jp&media=music&limit=100`;
     const response = await fetch(url);
     const data: any = await response.json();
     return data.results.map((track: any) => ({
@@ -225,21 +226,34 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     //曲の保存処理
     if (songData.startsWith("save:")) {
       const target = songData.replace("save:", "");
-      let isDuplicate = false; // ★ 重複フラグ
+      // 「曲名 / アーティスト名」の形式からアーティスト名だけを抽出
+      const artistName = target.split(" / ")[1]?.trim();
+
+      let isDuplicate = false;
 
       await db.update((data: Data) => {
         let user = data.users.find((u: UserData) => u.userId === userId);
         if (user) {
+          // 既存データの互換性ガード（myArtistsがない場合を考慮）
+          if (!user.myArtists) user.myArtists = [];
+
           if (user.mySongs.includes(target)) {
-            isDuplicate = true; // ★ すでにある場合はフラグを立てる
+            isDuplicate = true;
           } else {
+            // 曲をマイリストに追加
             user.mySongs.push(target);
+
+            // ★ アーティスト名をアーティストリストに追加（重複チェック）
+            if (artistName && !user.myArtists.includes(artistName)) {
+              user.myArtists.push(artistName);
+            }
           }
         }
       });
 
       // --- 重複していた場合の返信 ---
       if (isDuplicate) {
+        // ...（既存の重複メッセージ処理：変更なし）
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [
@@ -265,13 +279,11 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       const isGroupPostback = event.source.type !== "user";
 
       if (isGroupPostback) {
-        //グループチャットで登録ボタンが押されたとき
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [{ type: "text", text: `✅ ${target} を登録したよ！` }]
         });
       } else {
-        //個人チャットで登録ボタンが押されたとき
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [
@@ -283,6 +295,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                 type: "buttons",
                 text: "続けて登録するか、操作を選んでね",
                 actions: [
+                  { type: "message", label: `🔍 ${artistName} で再検索`, text: artistName },
                   { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
                   { type: "message", label: "📋 リスト確認", text: "リスト確認" },
                   { type: "message", label: "✅ 登録終了", text: "登録終了" },
@@ -309,14 +322,28 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     }];
 
     // --- 削除処理 ---
+    // 削除ロジック
     if (songData.startsWith("delete:")) {
       const target = songData.replace("delete:", "");
+      // 削除する曲からアーティスト名を抽出
+      const artistName = target.split(" / ")[1]?.trim();
       
       await db.update((data: Data) => {
         const u = data.users.find((x: UserData) => x.userId === userId);
         if (u) {
-          // targetと一致しない曲だけを残す（＝targetを消す）
+          // 1. 指定された曲を削除
           u.mySongs = u.mySongs.filter((song: string) => song !== target);
+
+          // 2. 他にそのアーティストの曲が残っているかチェック
+          // 「 / アーティスト名」で終わる、あるいは含む曲があるか確認
+          const isArtistStillPresent = u.mySongs.some((song: string) => 
+            song.includes(` / ${artistName}`)
+          );
+
+          // 3. 他に曲が1つもなければ、アーティストリストからも削除
+          if (!isArtistStillPresent && artistName && u.myArtists) {
+            u.myArtists = u.myArtists.filter((a: string) => a !== artistName);
+          }
         }
       });
 
@@ -622,27 +649,42 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
 
       let resultMessages: string[] = ["【ペア別の一致曲】"];
 
-      // db.data.users を直接参照します
       const usersInDb = db.data.users;
 
       teams.forEach((teamIds: string[], index: number) => {
-        // チーム全員のプロフィール名を取得
+        // チーム全員のプロフィール、曲リスト、アーティストリストを取得
         const teamMembers = teamIds.map(id => {
           const u = usersInDb.find((x: UserData) => x.userId === id);
-          return { name: u?.displayName || "不明", songs: u?.mySongs || [] };
+          return { 
+            name: u?.displayName || "不明", 
+            songs: u?.mySongs || [],
+            artists: u?.myArtists || [] // ★アーティストリストを追加
+          };
         });
 
-        // 全員のリストに共通して存在する曲を抽出
+        // 1. 共通の「曲」を抽出
         let commonSongs = teamMembers[0].songs;
         for (let i = 1; i < teamMembers.length; i++) {
           commonSongs = commonSongs.filter((song: string) => teamMembers[i].songs.includes(song));
         }
 
+        // 2. 共通の「アーティスト」を抽出
+        let commonArtists = teamMembers[0].artists;
+        for (let i = 1; i < teamMembers.length; i++) {
+          commonArtists = commonArtists.filter((artist: string) => teamMembers[i].artists.includes(artist));
+        }
+
         const memberNames = teamMembers.map(m => m.name).join("＆");
+
         if (commonSongs.length > 0) {
-          resultMessages.push(`\n▼ ${memberNames}\n・${commonSongs.join("\n・")}`);
+          // 曲が一致した場合
+          resultMessages.push(`\n▼ ${memberNames}\n【一致曲】\n・${commonSongs.join("\n・")}`);
+        } else if (commonArtists.length > 0) {
+          // 曲は一致しないが、アーティストが一致した場合
+          resultMessages.push(`\n▼ ${memberNames}\n【一致アーティスト】\n・${commonArtists.join("\n・")}\n（この人の曲なら共通の持ち歌があるかも！）`);
         } else {
-          resultMessages.push(`\n▼ ${memberNames}\n（一致する曲がなかったよ…💦）`);
+          // どちらも一致しなかった場合
+          resultMessages.push(`\n▼ ${memberNames}\n（一致する曲もアーティストもなかったよ…💦）`);
         }
       });
 
@@ -738,7 +780,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       const profile = await client.getProfile(userId);
       await db.update((data: Data) => {
         let u = data.users.find((x: UserData) => x.userId === userId);
-        if (!u) data.users.push({ userId, displayName: profile.displayName, mySongs: [], isRegisteringSong: true });
+        if (!u) data.users.push({ userId, displayName: profile.displayName, mySongs: [], myArtists: [], isRegisteringSong: true });
         else u.isRegisteringSong = true;
       });
       return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu("【曲の登録】\n登録したい曲名や歌手名を入力して送ってね！") });

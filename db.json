@@ -5,7 +5,6 @@
       "displayName": "市村直輝",
       "mySongs": [
         "Lemon / 米津玄師",
-        "歌うたいのバラッド / 斉藤和義",
         "前前前世 / RADWIMPS",
         "怪獣 / サカナクション",
         "ミュージック / サカナクション",
@@ -16,9 +15,37 @@
         "プラトー / サカナクション",
         "アイデンティティ / サカナクション",
         "新宝島 / サカナクション",
-        "忘れられないの / サカナクション"
+        "忘れられないの / サカナクション",
+        "Aoi / サカナクション",
+        "怪獣の花唄 / Vaundy",
+        "踊り子 / Vaundy",
+        "HANABI / Mr.Children",
+        "365日 / Mr.Children",
+        "足音 ~Be Strong / Mr.Children",
+        "シーソーゲーム~勇敢な恋の歌~ / Mr.Children",
+        "DOGLAND / PEOPLE 1",
+        "魔法の歌 / PEOPLE 1",
+        "感電 / 米津玄師",
+        "ピースサイン - Peace Sign / 米津玄師",
+        "ヒロイン / back number",
+        "高嶺の花子さん / back number",
+        "クリスマスソング / back number",
+        "水平線 / back number",
+        "歌うたいのバラッド / 斉藤和義",
+        "歩いて帰ろう / 斉藤和義"
       ],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": [
+        "米津玄師",
+        "RADWIMPS",
+        "サカナクション",
+        "米津玄師 & 菅田 将暉",
+        "Vaundy",
+        "Mr.Children",
+        "PEOPLE 1",
+        "back number",
+        "斉藤和義"
+      ]
     },
     {
       "userId": "U1ed5b3b97e657a13ae5908fbe3216545",
@@ -30,7 +57,14 @@
         "怪獣 / サカナクション",
         "怪獣の花唄 / Vaundy"
       ],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": [
+        "米津玄師",
+        "レミオロメン",
+        "LiSA",
+        "サカナクション",
+        "Vaundy"
+      ]
     },
     {
       "userId": "Ua3bb9fdc3af35465d19029ae91993d81",
@@ -56,7 +90,17 @@
         "踊り子 / Vaundy",
         "タイムパラドックス / Vaundy"
       ],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": [
+        "Mr.Children",
+        "SEKAI NO OWARI",
+        "米津玄師",
+        "BUMP OF CHICKEN",
+        "back number",
+        "Mrs. GREEN APPLE",
+        "サカナクション",
+        "Vaundy"
+      ]
     },
     {
       "userId": "U129d131de568026f6ab42fd2a0aef2ea",
@@ -91,7 +135,16 @@
         "涙のキッス / サザンオールスターズ",
         "勝手にシンドバッド / サザンオールスターズ"
       ],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": [
+        "宇多田ヒカル",
+        "Vaundy",
+        "AAA",
+        "ORANGE RANGE",
+        "back number",
+        "桑田佳祐",
+        "サザンオールスターズ"
+      ]
     },
     {
       "userId": "Ud6394d4517cedf2d53be6482545bb47a",
@@ -119,7 +172,20 @@
         "ちんちんかいちゃダメ / Unching Brothers Band",
         "ちんちん(More Big Size Mix) / りこ & おっさ"
       ],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": [
+        "ケシ",
+        "Naomi Sharon",
+        "Vaundy",
+        "XG",
+        "宇多田ヒカル",
+        "Djo",
+        "girl in red",
+        "尾崎豊",
+        "村上雄太",
+        "Unching Brothers Band",
+        "りこ & おっさ"
+      ]
     },
     {
       "userId": "Ua21a9c43dd8ad3ad8fc3a6554247e906",
@@ -142,7 +208,7 @@
         "ちんこまんこに集まってくるごみは死ね / ヌミャーン",
         "Permission to Dance / BTS",
         "あなたのチンコは何センチ? / Adult family",
-        "ちんこびんびんび★びんらでぇん / ReVision of Sence",
+        "ちんこびびんび★びんらでぇん / ReVision of Sence",
         "ちんこいらなくね? / 画鋲",
         "ちんこポジション / 巨乳まんだら王国。",
         "ぼくがおっぱい大きくしてあげる / でか美ちゃん",
@@ -150,7 +216,23 @@
         "ちんちん(More Big Size Mix) / りこ & おっさ",
         "オー・チンチン / MION & THE太地★櫻田"
       ],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": [
+        "Vaundy",
+        "米津玄師",
+        "サカナクション",
+        "GReeeeN",
+        "ヌミャーン",
+        "BTS",
+        "Adult family",
+        "ReVision of Sence",
+        "画鋲",
+        "巨乳まんだら王国。",
+        "でか美ちゃん",
+        "爆乳ヤンキー",
+        "りこ & おっさ",
+        "MION & THE太地★櫻田"
+      ]
     },
     {
       "userId": "U34284e7ea622bffcc925d1d84f8cff17",
@@ -227,19 +309,45 @@
         "地獄でなぜ悪い / 星野源",
         "曇天 / DOES"
       ],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": [
+        "RIP SLYME",
+        "桑田佳祐",
+        "サザンオールスターズ",
+        "ILLIT",
+        "サンボマスター",
+        "藤井 風",
+        "Vaundy",
+        "Mr.Children",
+        "サカナクション",
+        "MONGOL800",
+        "シャ乱Q",
+        "RADWIMPS",
+        "反町隆史",
+        "DEEN",
+        "チェッカーズ",
+        "レミオロメン",
+        "米津玄師",
+        "宇多田ヒカル",
+        "米津玄師 & 宇多田ヒカル",
+        "back number",
+        "星野源",
+        "DOES"
+      ]
     },
     {
       "userId": "Ufecf3a9bd31a7bab730dbfec5f13e81b",
       "displayName": "岡部駿",
       "mySongs": [],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": []
     },
     {
       "userId": "Ud492094d630526fc97810fa82f4c6756",
       "displayName": "ikkaku",
       "mySongs": [],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": []
     },
     {
       "userId": "U8cb11a724cb284b7f443dd323b75f964",
@@ -247,13 +355,17 @@
       "mySongs": [
         "花束 / back number"
       ],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": [
+        "back number"
+      ]
     },
     {
       "userId": "Udba08c2f10abd19ed752970fc13ebd5b",
       "displayName": "abc",
       "mySongs": [],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": []
     },
     {
       "userId": "Uc7f749602974a98cbb22326278dd25f9",
@@ -261,7 +373,10 @@
       "mySongs": [
         "ray / BUMP OF CHICKEN"
       ],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": [
+        "BUMP OF CHICKEN"
+      ]
     },
     {
       "userId": "Uab5a4d0b1c010c51093cf1dddde0e384",
@@ -270,7 +385,11 @@
         "夜に駆ける / YOASOBI",
         "怪獣 / サカナクション"
       ],
-      "isRegisteringSong": false
+      "isRegisteringSong": false,
+      "myArtists": [
+        "YOASOBI",
+        "サカナクション"
+      ]
     },
     {
       "userId": "U39cd8d1ae0dfd88b07e74feb4014132e",
@@ -278,7 +397,10 @@
       "mySongs": [
         "新宝島 / サカナクション"
       ],
-      "isRegisteringSong": true
+      "isRegisteringSong": true,
+      "myArtists": [
+        "サカナクション"
+      ]
     }
   ],
   "groups": [
