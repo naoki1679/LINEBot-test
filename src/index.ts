@@ -68,17 +68,20 @@ function startMessages(): line.messagingApi.Message[] {
     {
       type: "image",
       // HTTPSの直リンクである必要があります
-      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_i1zbbmi1zbbmi1zb%20(2)%20(1)%20(1)%20(1).png?raw=true", 
-      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_i1zbbmi1zbbmi1zb%20(2)%20(1)%20(1)%20(1).png?raw=true"
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/participate.png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/participate.png?raw=true"
+    },
+    {
+      type: "image",
+      // HTTPSの直リンクである必要があります
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
     },
     { type: "template", altText: "グループメニュー",
       template: {
-        type: "buttons", text: "【グループメニュー】\nみんなで楽しもう！",
+        type: "buttons", text: "まずはカラオケに参加するメンバーの把握から始めるよ！！",
         actions: [
-          { type: "message", label: "⚙️ メンバー管理", text: "メンバー管理" },
-          { type: "message", label: "🎤 順番の提案、確認", text: "順番の提案、確認" },
-          { type: "message", label: "🎵 共通曲の提案", text: "共通曲の提案" }, // 既存のロジックへ
-          { type: "message", label: "🎮 遊び方の提案", text: "遊び方の提案" }, // 既存のロジックへ
+          { type: "message", label: "⚙️ メンバー登録（必須）", text: "メンバー登録を開始" }
         ]
       }}
   ];
@@ -89,9 +92,23 @@ function getPrivateMenu(): line.messagingApi.Message[] {
     {
       type: "image",
       // HTTPSの直リンクである必要があります
-      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_qk90cyqk90cyqk90%20(1)%20(1)%20(1)%20(1).png?raw=true", 
-      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/Gemini_Generated_Image_qk90cyqk90cyqk90%20(1)%20(1)%20(1)%20(1).png?raw=true"
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
     },
+    { type: "text", text: "まずは簡易設定で歌える曲を追加しよう" },
+    { type: "template", altText: "個人メニュー",
+      template: {
+        type: "buttons", text: "【個人メニュー】\n何をする？",
+        actions: [
+          { type: "message", label: "🎵 曲の簡易設定（初めての方は必須）", text: "簡易設定を始める" },
+        ]
+      }
+    }
+  ];
+}
+
+function getFullPrivateMenu(): line.messagingApi.Message[] {
+  return [
     {type: "template", altText: "個人メニュー",
       template: {
         type: "buttons", text: "【個人メニュー】\n何をする？",
@@ -103,6 +120,62 @@ function getPrivateMenu(): line.messagingApi.Message[] {
       }
     }
   ];
+}
+
+// --- 1. 定番10曲の定義 ---
+const BEGINNER_SONGS = [
+    "Lemon / 米津玄師",
+    "マリーゴールド / あいみょん",
+    "小さな恋のうた / MONGOL800",
+    "怪獣の花唄 / Vaundy",
+    "キセキ / GReeeeN",
+    "残酷な天使のテーゼ / 高橋洋子",
+    "アイドル / YOASOBI",
+    "糸 / 中島みゆき",
+    "丸ノ内サディスティック / 椎名林檎",
+    "チェリー / スピッツ"
+];
+
+// --- 2. 共通の保存ロジック（関数の外に出す） ---
+async function saveToMyList(userId: string, target: string, db: any) {
+  const artistName = target.split(" / ")[1]?.trim();
+  let isDuplicate = false;
+  await db.update((data: Data) => {
+    let user = data.users.find((u: UserData) => u.userId === userId);
+    if (user) {
+      if (!user.myArtists) user.myArtists = [];
+      if (user.mySongs.includes(target)) {
+        isDuplicate = true;
+      } else {
+        user.mySongs.push(target);
+        if (artistName && !user.myArtists.includes(artistName)) {
+          user.myArtists.push(artistName);
+        }
+      }
+    }
+  });
+  return isDuplicate;
+}
+
+// --- 3. 質問を表示する共通関数 ---
+async function sendSetupQuestion(client: line.messagingApi.MessagingApiClient, replyToken: string, index: number) {
+    const song = BEGINNER_SONGS[index];
+    const progress = `(${index + 1} / ${BEGINNER_SONGS.length})`;
+    return client.replyMessage({
+        replyToken: replyToken,
+        messages: [{
+            type: "template",
+            altText: "簡易設定",
+            template: {
+                type: "confirm",
+                text: `${progress}\n「${song}」は歌えますか？`,
+                actions: [
+                    { type: "postback", label: "歌える！", data: `setup_save:${index}`, displayText: "歌える！" },
+                    { type: "postback", label: "歌えない", data: `setup_skip:${index}`, displayText: "歌えない" }
+                ]
+            }
+        }]
+    });
 }
 
 function songDecisionButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "決定", template: { type: "buttons", text: "どうする？", actions: [{ type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "候補を出す", text: "候補を出す" }] } }]; }
@@ -127,10 +200,23 @@ const eraButtonHandlers: Record<string, () => line.messagingApi.Message[]> = {
   "2024～2025": () => [{ type: "template", altText: "選", template: { type: "buttons", text: "どの年？", actions: [{ type: "message", label: "2024", text: "年：2024" }, { type: "message", label: "2025", text: "年：2025" }] } }],
 };
 
+// --- ロック管理用の変数をグローバル（ハンドラーの外）に宣言 ---
+const activeLocks = new Set<string>();
+
 // --- 5. メインハンドラー ---
 async function handleEvent(client: line.messagingApi.MessagingApiClient, event: line.WebhookEvent, db: any) {
   const stateKey = getStateKey(event);
   const currentState = tempStates[stateKey] || (tempStates[stateKey] = {});
+  const userId = event.source.userId!;
+
+  if (activeLocks.has(stateKey)) {
+    console.log(`Lock active for: ${stateKey}, ignored.`);
+    return;
+  }
+
+  try {
+    // ★ ロックをかける
+    activeLocks.add(stateKey);
 
   // A. 自動挨拶イベント
   if (event.type === "join") {
@@ -144,7 +230,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
   // B. ポストバック（検索結果の登録）
   if (event.type === "postback") {
     const userId = event.source.userId!;
-    const songData = event.postback.data; 
+    let songData: string = event.postback.data;
     const userData = db.data.users.find((u: UserData) => u.userId === userId);
     
     // --- 【追加】すでに登録済みのボタンが押された場合 (ignore) ---
@@ -221,29 +307,44 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         ]
       });
     }
-
   
+    if (songData.startsWith("setup_")) {
+    const [action, indexStr] = songData.split(":");
+    const index = parseInt(indexStr);
+    const nextIndex = index + 1;
+
+    if (action === "setup_save") {
+      // 既存の save ロジックを動かすためにデータを書き換え
+      songData = `save:${BEGINNER_SONGS[index]}`;
+    } else if (action === "setup_skip") {
+      // 「知らない（スキップ）」を押した場合は直接次の質問へ
+      if (nextIndex < BEGINNER_SONGS.length) {
+        return sendSetupQuestion(client, event.replyToken, nextIndex);
+      } else {
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [{ type: "text", text: "✨ 全曲の確認が終わりました！設定完了です。" }, ...getFullPrivateMenu()]
+        });
+      }
+    }
+  }
+
     //曲の保存処理
     if (songData.startsWith("save:")) {
       const target = songData.replace("save:", "");
-      // 「曲名 / アーティスト名」の形式からアーティスト名だけを抽出
       const artistName = target.split(" / ")[1]?.trim();
+      const isSetup = event.postback.data.startsWith("setup_save:"); // 判定用
 
       let isDuplicate = false;
 
       await db.update((data: Data) => {
         let user = data.users.find((u: UserData) => u.userId === userId);
         if (user) {
-          // 既存データの互換性ガード（myArtistsがない場合を考慮）
           if (!user.myArtists) user.myArtists = [];
-
           if (user.mySongs.includes(target)) {
             isDuplicate = true;
           } else {
-            // 曲をマイリストに追加
             user.mySongs.push(target);
-
-            // ★ アーティスト名をアーティストリストに追加（重複チェック）
             if (artistName && !user.myArtists.includes(artistName)) {
               user.myArtists.push(artistName);
             }
@@ -251,9 +352,45 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         }
       });
 
-      // --- 重複していた場合の返信 ---
+      // --- 1. 重複時の処理 ---
       if (isDuplicate) {
-        // ...（既存の重複メッセージ処理：変更なし）
+        // ★ 簡易設定中の場合は、重複していても次の質問へ誘導する
+        if (isSetup) {
+          const currentIndex = parseInt(event.postback.data.split(":")[1]);
+          const nextIndex = currentIndex + 1;
+
+          if (nextIndex < BEGINNER_SONGS.length) {
+            return client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [
+                { type: "text", text: `⚠️「${target}」はすでに登録済みだったよ！` },
+                {
+                  type: "template",
+                  altText: "簡易設定",
+                  template: {
+                    type: "confirm",
+                    text: `(${nextIndex + 1} / ${BEGINNER_SONGS.length})\n「${BEGINNER_SONGS[nextIndex]}」は歌えますか？`,
+                    actions: [
+                      { type: "postback", label: "歌える！", data: `setup_save:${nextIndex}`, displayText: "歌える！" },
+                      { type: "postback", label: "歌えない", data: `setup_skip:${nextIndex}`, displayText: "歌えない" }
+                    ]
+                  }
+                }
+              ]
+            });
+          } else {
+            // 重複していた曲が最後の10曲目だった場合
+            return client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [
+                { type: "text", text: `⚠️「${target}」はすでに登録済みだったよ！\n\n✨ 全10曲の確認が完了しました。お疲れ様でした！` },
+                ...getFullPrivateMenu()
+              ]
+            });
+          }
+        }
+
+        //通常時の処理
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [
@@ -265,7 +402,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                 type: "buttons",
                 text: "続けて登録するか、操作を選んでね",
                 actions: [
-                  { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+                  { type: "message", label: "↩️ 一曲消す", text: "一曲消す" },
                   { type: "message", label: "📋 リスト確認", text: "リスト確認" },
                   { type: "message", label: "✅ 登録終了", text: "登録終了" },
                 ]
@@ -275,36 +412,73 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         });
       }
 
-      // --- 成功時の出し分け判定 ---
+      // --- 2. グループ内での登録（簡易設定以外） ---
       const isGroupPostback = event.source.type !== "user";
-
       if (isGroupPostback) {
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [{ type: "text", text: `✅ ${target} を登録したよ！` }]
         });
-      } else {
-        return client.replyMessage({
-          replyToken: event.replyToken,
-          messages: [
-            { type: "text", text: `✅「${target}」を登録したよ！` },
-            {
-              type: "template",
-              altText: "登録中メニュー",
-              template: {
-                type: "buttons",
-                text: "続けて登録するか、操作を選んでね",
-                actions: [
-                  { type: "message", label: `🔍 ${artistName} で再検索`, text: artistName },
-                  { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
-                  { type: "message", label: "📋 リスト確認", text: "リスト確認" },
-                  { type: "message", label: "✅ 登録終了", text: "登録終了" },
-                ]
-              }
-            }
-          ]
-        });
       }
+
+      // --- 3. 【本番】簡易設定中の出し分け ---
+      if (isSetup) {
+        const currentIndex = parseInt(event.postback.data.split(":")[1]);
+        const nextIndex = currentIndex + 1;
+
+        if (nextIndex < BEGINNER_SONGS.length) {
+          // 次の曲がある場合
+          return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [
+              { type: "text", text: isDuplicate ? `⚠️「${target}」は登録済みだったよ！` : `✅「${target}」を登録したよ！` },
+              {
+                type: "template",
+                altText: "簡易設定",
+                template: {
+                  type: "confirm",
+                  text: `(${nextIndex + 1} / ${BEGINNER_SONGS.length})\n「${BEGINNER_SONGS[nextIndex]}」は歌えますか？`,
+                  actions: [
+                    { type: "postback", label: "歌える！", data: `setup_save:${nextIndex}`, displayText: "歌える！" },
+                    { type: "postback", label: "歌えない", data: `setup_skip:${nextIndex}`, displayText: "歌えない" }
+                  ]
+                }
+              }
+            ]
+          });
+        } else {
+          // 全10曲終了した場合
+          return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [
+              { type: "text", text: `✅「${target}」を登録したよ！\n\n✨ お疲れ様でした！全曲の確認が完了しました。` },
+              ...getFullPrivateMenu()
+            ]
+          });
+        }
+      }
+
+      // --- 4. 通常の個人チャットでの登録完了 ---
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          { type: "text", text: `✅「${target}」を登録したよ！` },
+          {
+            type: "template",
+            altText: "登録中メニュー",
+            template: {
+              type: "buttons",
+              text: "続けて登録するか、操作を選んでね",
+              actions: [
+                { type: "message", label: `🔍 ${artistName} で再検索`, text: artistName },
+                { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+                { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+                { type: "message", label: "✅ 登録終了", text: "登録終了" },
+              ]
+            }
+          }
+        ]
+      });
     }
 
     const getMyListMenu = (): line.messagingApi.Message[] => [{
@@ -423,28 +597,218 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
 
     // --- 1. メンバー管理 階層 ---
     if (text === "メンバー管理") {
-      return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu("メンバーの追加や確認ができます。") });
+      let currentNames: string[] = [];
+      let updatedNames: string[] = []; // ここに最新のリストを入れる
+
+      await db.update((data: Data) => {
+        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) {
+          g.isRegistering = true; 
+          currentNames = g.memberNames;
+          updatedNames = g.memberNames; // ★追加：既存のメンバーをセット
+        } else {
+          const newGroup = { groupId: stateKey, memberIds: [], memberNames: [], isRegistering: true };
+          data.groups.push(newGroup);
+          updatedNames = []; // 新規の場合は空
+        }
+      });
+      
+      // メンバーがいればそのリスト、いなければ「未登録」などの文字を入れる
+      const memberListText = updatedNames.length > 0 ? updatedNames.join("、") : "（まだ誰もいないよ）";
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: "flex",
+          altText: "メンバー受付中",
+          contents: {
+            type: "bubble",
+            body: {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                { type: "text", text: "👥 メンバー受付中", weight: "bold", size: "lg", color: "#1DB954" },
+                { type: "separator", margin: "md" },
+                { type: "text", text: `現在 ${updatedNames.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                { type: "text", text: memberListText, margin: "sm", wrap: true, size: "md" },
+          
+                // --- ボタンエリアの開始 ---
+                {
+                  type: "box",
+                  layout: "vertical",
+                  spacing: "md",
+                  margin: "xl",
+                  contents: [
+                    // 1段目：メイン登録（単独）
+                    {
+                      type: "button",
+                      style: "primary",
+                      color: "#1DB954",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🙋‍♂️ 参加する",
+                        text: "参加！"
+                      }
+                    }, 
+                    // 2段目：抜けるとリセットを横並び
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      spacing: "md",
+                      contents: [
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#FF6B6B", // 抜ける（赤系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "🏃 抜ける",
+                            text: "メンバーから抜ける"
+                          }
+                        },
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#68e694", // リセット（緑系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "♻️ リセット",
+                            text: "メンバーリセット"
+                          }
+                        }
+                      ]
+                    },
+                    // 3段目：終了ボタン（単独）
+                    {
+                      type: "button",
+                      style: "secondary",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🔙 決定してメニューへ",
+                        text: "メニュー"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }]
+      });
     }
 
     // 「登録を開始」を「追加受付」の挙動に変更
     if (text === "メンバー登録を開始") {
       let currentNames: string[] = [];
+      let updatedNames: string[] = []; // ここに最新のリストを入れる
+
       await db.update((data: Data) => {
         let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
         if (g) {
-          // ★ここから [] (空にする処理) を削除しました
           g.isRegistering = true; 
           currentNames = g.memberNames;
+          updatedNames = g.memberNames; // ★追加：既存のメンバーをセット
         } else {
-          data.groups.push({ groupId: stateKey, memberIds: [], memberNames: [], isRegistering: true });
+          const newGroup = { groupId: stateKey, memberIds: [], memberNames: [], isRegistering: true };
+          data.groups.push(newGroup);
+          updatedNames = []; // 新規の場合は空
         }
       });
       
-      const info = currentNames.length > 0 
-        ? `【追加受付中】\n現在のメンバー：${currentNames.join("、")}\n\nさらに追加する人はメッセージを送ってね！`
-        : "【新規受付中】メッセージを送った人を登録するよ！";
+      // メンバーがいればそのリスト、いなければ「未登録」などの文字を入れる
+      const memberListText = updatedNames.length > 0 ? updatedNames.join("、") : "（まだ誰もいないよ）";
 
-      return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu(info) });
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: "flex",
+          altText: "メンバー受付中",
+          contents: {
+            type: "bubble",
+            body: {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                { type: "text", text: "👥 メンバー受付中", weight: "bold", size: "lg", color: "#1DB954" },
+                { type: "separator", margin: "md" },
+                { type: "text", text: `現在 ${updatedNames.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                { type: "text", text: memberListText, margin: "sm", wrap: true, size: "md" },
+          
+                // --- ボタンエリアの開始 ---
+                {
+                  type: "box",
+                  layout: "vertical",
+                  spacing: "md",
+                  margin: "xl",
+                  contents: [
+                    // 1段目：メイン登録（単独）
+                    {
+                      type: "button",
+                      style: "primary",
+                      color: "#1DB954",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🙋‍♂️ 参加する",
+                        text: "参加！"
+                      }
+                    }, 
+                    // 2段目：抜けるとリセットを横並び
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      spacing: "md",
+                      contents: [
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#FF6B6B", // 抜ける（赤系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "🏃 抜ける",
+                            text: "メンバーから抜ける"
+                          }
+                        },
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#68e694", // リセット（緑系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "♻️ リセット",
+                            text: "メンバーリセット"
+                          }
+                        }
+                      ]
+                    },
+                    // 3段目：終了ボタン（単独）
+                    {
+                      type: "button",
+                      style: "secondary",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🔙 決定してメニューへ",
+                        text: "メニュー"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }]
+      });
     }
 
     // 現在のメンバー確認
@@ -475,18 +839,200 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
 
     // メンバーリセット（空にしたい時だけ明示的に使う）
     if (text === "メンバーリセット") {
+      let updatedNames: string[] = [];
+
       await db.update((data: Data) => {
         let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
         if (g) {
           g.memberIds = [];
           g.memberNames = [];
-          g.isRegistering = false; // リセット時は受付も終了する
+          // 受付を継続したい場合は true にします
+          g.isRegistering = true; 
+          updatedNames = g.memberNames;
         }
       });
-      return client.replyMessage({ replyToken: event.replyToken, messages: getMemberAdminMenu("メンバーをリセットしました。") });
+
+      // 空文字エラー回避のためのガード
+      const memberListText = updatedNames.length > 0 ? updatedNames.join("、") : "（リセットされました）";
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: "flex",
+          altText: "メンバーリセット完了",
+          contents: {
+            type: "bubble",
+            body: {
+              type: "box", layout: "vertical", contents: [
+                { type: "text", text: "♻️ メンバーをリセットしました", weight: "bold", size: "md", color: "#FF6B6B" },
+                { type: "separator", margin: "md" },
+                { type: "text", text: `現在 ${updatedNames.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                { type: "text", text: memberListText, margin: "sm", wrap: true, size: "md" },
+                // --- ボタンエリアの開始 ---
+                // --- ボタンエリア（3段構成）の開始 ---
+                {
+                  type: "box",
+                  layout: "vertical",
+                  spacing: "md",
+                  margin: "xl",
+                  contents: [
+                    // 1段目：メイン登録（単独）
+                    {
+                      type: "button",
+                      style: "primary",
+                      color: "#1DB954",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🙋‍♂️ 参加する",
+                        text: "参加！"
+                      }
+                    }, 
+                    // 2段目：抜けるとリセットを横並び
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      spacing: "md",
+                      contents: [
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#FF6B6B", // 抜ける（赤系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "🏃 抜ける",
+                            text: "メンバーから抜ける"
+                          }
+                        },
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#68e694", // リセット（緑系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "♻️ リセット",
+                            text: "メンバーリセット"
+                          }
+                        }
+                      ]
+                    },
+                    // 3段目：終了ボタン（単独）
+                    {
+                      type: "button",
+                      style: "secondary",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🔙 決定してメニューへ",
+                        text: "メニュー"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }]
+      });
     }
 
-    // --- 登録（追加）中の自動受付ロジック ---
+    // --- メンバーから抜ける処理 ---
+    if (text === "メンバーから抜ける") {
+      let updatedNames: string[] = [];
+      let removedName: string = ""; // 抜けた人の名前を保持する変数
+
+      await db.update((data: Data) => {
+    let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+        if (g) {
+          const index = g.memberIds.indexOf(userId);
+          // ★登録されている場合のみ処理を行う
+          if (index > -1) {
+            removedName = g.memberNames[index];
+            g.memberIds.splice(index, 1);
+            g.memberNames.splice(index, 1);
+            updatedNames = g.memberNames;
+          }
+        }
+      });
+
+      // ★名前が取れなかった（登録されていなかった）場合は、何もせずに終了
+      if (!removedName) return;
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          { type: "text", text: `🏃 ${removedName} さんがメンバーから抜けました。` },
+          {
+            type: "flex",
+            altText: "メンバー更新",
+            contents: {
+              type: "bubble",
+              body: {
+                type: "box",
+                layout: "vertical",
+                contents: [
+                  { type: "text", text: "👥 メンバー受付中", weight: "bold", size: "lg", color: "#1DB954" },
+                  { type: "separator", margin: "md" },
+                  { type: "text", text: `現在 ${updatedNames.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                  { type: "text", text: updatedNames.length > 0 ? updatedNames.join("、") : "（なし）", margin: "sm", wrap: true, size: "md" },
+                  
+                  // --- ボタンエリア（3段構成） ---
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "md",
+                    margin: "xl",
+                    contents: [
+                      {
+                        type: "button",
+                        style: "primary",
+                        color: "#1DB954",
+                        height: "sm",
+                        action: { type: "message", label: "🙋‍♂️参加する", text: "参加！" }
+                      },
+                      {
+                        type: "box",
+                        layout: "horizontal",
+                        spacing: "md",
+                        contents: [
+                          {
+                            type: "button",
+                            style: "primary",
+                            color: "#FF6B6B",
+                            flex: 1,
+                            height: "sm",
+                            action: { type: "message", label: "🏃 抜ける", text: "メンバーから抜ける" }
+                          },
+                          {
+                            type: "button",
+                            style: "primary",
+                            color: "#68e694",
+                            flex: 1,
+                            height: "sm",
+                            action: { type: "message", label: "♻️ リセット", text: "メンバーリセット" }
+                          }
+                        ]
+                      },
+                      {
+                        type: "button",
+                        style: "secondary",
+                        height: "sm",
+                        action: { type: "message", label: "🔙 決定してメニューへ", text: "メニュー" }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      });
+    }
+
     // --- 登録（追加）中の自動受付ロジック ---
     if (groupData?.isRegistering && !["メンバー登録を開始", "登録状況を確認", "メンバーリセット", "メニュー"].includes(text)) {
         let profile;
@@ -494,12 +1040,97 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
           // ★ プロフィール取得を試みる
           profile = await client.getProfile(userId);
         } catch (error) {
+          let memberList: string[] = [];
+          await db.update((data: Data) => {
+          let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+          // profile.displayName を安全に使用
+          if (g) memberList = g.memberNames;
+        });
           // ★ 友達登録していない場合、ここでエラーをキャッチして警告を出す
           return client.replyMessage({
             replyToken: event.replyToken,
             messages: [{ 
               type: "text", 
               text: "⚠️ メンバー登録ができなかったよ！\n\nカラキン を「追加（友達登録）」してから、もう一度メッセージを送ってね！" 
+            },
+          {
+              type: "flex",
+              altText: "メンバー更新",
+              contents: {
+                type: "bubble",
+                body: {
+                  type: "box", layout: "vertical", contents: [
+                    { type: "text", text: "👥 メンバー追加中", weight: "bold", size: "lg", color: "#1DB954" },
+                    { type: "separator", margin: "md" },
+                    { type: "text", text: `現在 ${memberList.length} 名：`, margin: "md", size: "sm", color: "#888888" },
+                    { type: "text", text: memberList.join("、"), margin: "sm", wrap: true, size: "md" },
+                    // --- ボタンエリアの開始 ---
+                    {
+                  type: "box",
+                  layout: "vertical",
+                  spacing: "md",
+                  margin: "xl",
+                  contents: [
+                    // 1段目：メイン登録（単独）
+                    {
+                      type: "button",
+                      style: "primary",
+                      color: "#1DB954",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🙋‍♂️ 参加する",
+                        text: "参加！"
+                      }
+                    }, 
+                    // 2段目：抜けるとリセットを横並び
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      spacing: "md",
+                      contents: [
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#FF6B6B", // 抜ける（赤系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "🏃 抜ける",
+                            text: "メンバーから抜ける"
+                          }
+                        },
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#68e694", // リセット（緑系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "♻️ リセット",
+                            text: "メンバーリセット"
+                          }
+                        }
+                      ]
+                    },
+                    // 3段目：終了ボタン（単独）
+                    {
+                      type: "button",
+                      style: "secondary",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🔙 決定してメニューへ",
+                        text: "メニュー"
+                      }
+                    }
+                  ]
+                }
+                  ]
+                }
+              }
             }]
           });
         }
@@ -533,7 +1164,70 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                     { type: "separator", margin: "md" },
                     { type: "text", text: `現在 ${updatedNames.length} 名：`, margin: "md", size: "sm", color: "#888888" },
                     { type: "text", text: updatedNames.join("、"), margin: "sm", wrap: true, size: "md" },
-                    { type: "button", style: "primary", margin: "xl", color: "#1DB954", action: { type: "message", label: "✅ 登録を終了してメニューへ", text: "メニュー" } }
+                    // --- ボタンエリアの開始 ---
+                    {
+                  type: "box",
+                  layout: "vertical",
+                  spacing: "md",
+                  margin: "xl",
+                  contents: [
+                    // 1段目：メイン登録（単独）
+                    {
+                      type: "button",
+                      style: "primary",
+                      color: "#1DB954",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🙋‍♂️ 参加する",
+                        text: "参加！"
+                      }
+                    }, 
+                    // 2段目：抜けるとリセットを横並び
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      spacing: "md",
+                      contents: [
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#FF6B6B", // 抜ける（赤系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "🏃 抜ける",
+                            text: "メンバーから抜ける"
+                          }
+                        },
+                        {
+                          type: "button",
+                          style: "primary",
+                          color: "#68e694", // リセット（緑系）
+                          flex: 1,
+                          height: "sm",
+                          action: {
+                            type: "message",
+                            label: "♻️ リセット",
+                            text: "メンバーリセット"
+                          }
+                        }
+                      ]
+                    },
+                    // 3段目：終了ボタン（単独）
+                    {
+                      type: "button",
+                      style: "secondary",
+                      height: "sm",
+                      action: {
+                        type: "message",
+                        label: "🔙 決定してメニューへ",
+                        text: "メニュー"
+                      }
+                    }
+                  ]
+                }
                   ]
                 }
               }
@@ -545,12 +1239,85 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
 
     // --- 2. 順番の提案 階層 ---
     if (text === "順番の提案、確認") {
-      // ✅ ここで登録モードをOFFにする
-      await db.update((data: Data) => {
-        let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
-        if (g) g.isRegistering = false;
-      });
-      return client.replyMessage({ replyToken: event.replyToken, messages: getOrderMenu() });
+        // ✅ 登録モードをOFFにする
+        await db.update((data: Data) => {
+            let g = data.groups.find((x: GroupData) => x.groupId === stateKey);
+            if (g) g.isRegistering = false;
+        });
+
+        const orderText = groupData?.lastOrder || "まだ順番を決めていないよ！";
+
+        return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [{
+                type: "flex",
+                altText: "順番の確認・提案",
+                contents: {
+                    type: "bubble",
+                    body: {
+                        type: "box",
+                        layout: "vertical",
+                        contents: [
+                            // タイトル
+                            { type: "text", text: "📋 現在の順番・提案", weight: "bold", size: "lg", color: "#1DB954" },
+                            { type: "separator", margin: "md" },
+                            // 順番表示エリア
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                margin: "lg",
+                                backgroundColor: "#f0f0f0",
+                                paddingAll: "md",
+                                cornerRadius: "sm",
+                                contents: [
+                                    { type: "text", text: orderText, wrap: true, size: "sm", color: "#333333" }
+                                ]
+                            },
+                            // ボタンエリア（3段構成）
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                spacing: "md",
+                                margin: "xl",
+                                contents: [
+                                    // 1段目：ソロとペアを横並び
+                                    {
+                                        type: "box",
+                                        layout: "horizontal",
+                                        spacing: "md",
+                                        contents: [
+                                            {
+                                                type: "button",
+                                                style: "primary",
+                                                color: "#1DB954",
+                                                flex: 1,
+                                                height: "sm",
+                                                action: { type: "message", label: "👤 一人で", text: "ソロ順番提案" }
+                                            },
+                                            {
+                                                type: "button",
+                                                style: "primary",
+                                                color: "#1DB954",
+                                                flex: 1,
+                                                height: "sm",
+                                                action: { type: "message", label: "👫 ペアで", text: "ペア順番提案" }
+                                            }
+                                        ]
+                                    },
+                                    // 2段目：戻るボタン
+                                    {
+                                        type: "button",
+                                        style: "secondary",
+                                        height: "sm",
+                                        action: { type: "message", label: "🔙 戻る", text: "メニュー" }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }]
+        });
     }
 
     // --- 順番提案ロジックの修正 ---
@@ -570,7 +1337,77 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         }
       });
 
-      return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: orderText }, ...getOrderMenu()] });
+      return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [{
+                type: "flex",
+                altText: "順番の確認・提案",
+                contents: {
+                    type: "bubble",
+                    body: {
+                        type: "box",
+                        layout: "vertical",
+                        contents: [
+                            // タイトル
+                            { type: "text", text: "📋 新しい順番", weight: "bold", size: "lg", color: "#1DB954" },
+                            { type: "separator", margin: "md" },
+                            // 順番表示エリア
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                margin: "lg",
+                                backgroundColor: "#f0f0f0",
+                                paddingAll: "md",
+                                cornerRadius: "sm",
+                                contents: [
+                                    { type: "text", text: orderText, wrap: true, size: "sm", color: "#333333" }
+                                ]
+                            },
+                            // ボタンエリア（3段構成）
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                spacing: "md",
+                                margin: "xl",
+                                contents: [
+                                    // 1段目：ソロとペアを横並び
+                                    {
+                                        type: "box",
+                                        layout: "horizontal",
+                                        spacing: "md",
+                                        contents: [
+                                            {
+                                                type: "button",
+                                                style: "primary",
+                                                color: "#1DB954",
+                                                flex: 1,
+                                                height: "sm",
+                                                action: { type: "message", label: "👤 一人で", text: "ソロ順番提案" }
+                                            },
+                                            {
+                                                type: "button",
+                                                style: "primary",
+                                                color: "#1DB954",
+                                                flex: 1,
+                                                height: "sm",
+                                                action: { type: "message", label: "👫 ペアで", text: "ペア順番提案" }
+                                            }
+                                        ]
+                                    },
+                                    // 2段目：戻るボタン
+                                    {
+                                        type: "button",
+                                        style: "secondary",
+                                        height: "sm",
+                                        action: { type: "message", label: "🔙 戻る", text: "メニュー" }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }]
+      });
     }
 
     if (text === "ペア順番提案") {
@@ -598,20 +1435,20 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
 
       // --- チーム分けロジック ---
       if (sNames.length === 3) {
-        teamsTexts.push(`🎵 ${sNames.join(" ＆ ")} (トリオ)`);
+        teamsTexts.push(`・ ${sNames.join(" ＆ ")} (トリオ)`);
         teamsIds.push([sIds[0], sIds[1], sIds[2]]);
       } else {
         for (let i = 0; i < sNames.length; i += 2) {
           if (sNames.length - i === 3) {
-            teamsTexts.push(`🎵 ${sNames.slice(i).join(" ＆ ")} (トリオ)`);
+            teamsTexts.push(`・ ${sNames.slice(i).join(" ＆ ")} (トリオ)`);
             teamsIds.push([sIds[i], sIds[i+1], sIds[i+2]]);
             break;
           } 
           if (sNames[i + 1]) {
-            teamsTexts.push(`👫 ${sNames[i]} ＆ ${sNames[i + 1]}`);
+            teamsTexts.push(`・ ${sNames[i]} ＆ ${sNames[i + 1]}`);
             teamsIds.push([sIds[i], sIds[i+1]]);
           } else {
-            teamsTexts.push(`👤 ${sNames[i]} (ソロ)`);
+            teamsTexts.push(`・ ${sNames[i]} (ソロ)`);
             teamsIds.push([sIds[i]]);
           }
         }
@@ -628,10 +1465,77 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         }
       });
 
-      return client.replyMessage({ 
-        replyToken: event.replyToken, 
-        messages: [{ type: "text", text: orderText }, ...getOrderMenu()] 
-      });
+      return client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [{
+                type: "flex",
+                altText: "順番の確認・提案",
+                contents: {
+                    type: "bubble",
+                    body: {
+                        type: "box",
+                        layout: "vertical",
+                        contents: [
+                            // タイトル
+                            { type: "text", text: "📋 新しい順番", weight: "bold", size: "lg", color: "#1DB954" },
+                            { type: "separator", margin: "md" },
+                            // 順番表示エリア
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                margin: "lg",
+                                backgroundColor: "#f0f0f0",
+                                paddingAll: "md",
+                                cornerRadius: "sm",
+                                contents: [
+                                    { type: "text", text: orderText, wrap: true, size: "sm", color: "#333333" }
+                                ]
+                            },
+                            // ボタンエリア（3段構成）
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                spacing: "md",
+                                margin: "xl",
+                                contents: [
+                                    // 1段目：ソロとペアを横並び
+                                    {
+                                        type: "box",
+                                        layout: "horizontal",
+                                        spacing: "md",
+                                        contents: [
+                                            {
+                                                type: "button",
+                                                style: "primary",
+                                                color: "#1DB954",
+                                                flex: 1,
+                                                height: "sm",
+                                                action: { type: "message", label: "👤 一人で", text: "ソロ順番提案" }
+                                            },
+                                            {
+                                                type: "button",
+                                                style: "primary",
+                                                color: "#1DB954",
+                                                flex: 1,
+                                                height: "sm",
+                                                action: { type: "message", label: "👫 ペアで", text: "ペア順番提案" }
+                                            }
+                                        ]
+                                    },
+                                    // 2段目：戻るボタン
+                                    {
+                                        type: "button",
+                                        style: "secondary",
+                                        height: "sm",
+                                        action: { type: "message", label: "🔙 戻る", text: "メニュー" }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }]
+      })
     }
 
     // ★追加：今の順番を確認
@@ -775,6 +1679,34 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       return client.replyMessage({ replyToken: event.replyToken, messages: getMainMenu() });
     }
 
+    // --- 1.5 簡易設定
+    if (text === "簡易設定を始める") {
+        return sendSetupQuestion(client, event.replyToken, 0);
+    }
+
+
+    // --- 3. 質問を表示する共通関数 ---
+    async function sendSetupQuestion(client: any, replyToken: string, index: number) {
+        const song = BEGINNER_SONGS[index];
+        const progress = `(${index + 1} / ${BEGINNER_SONGS.length})`;
+
+        return client.replyMessage({
+            replyToken: replyToken,
+            messages: [{
+                type: "template",
+                altText: "簡易設定",
+                template: {
+                    type: "confirm",
+                    text: `${progress}\n「${song}」は歌えますか？`,
+                    actions: [
+                        { type: "postback", label: "歌える！", data: `setup_save:${index}`, displayText: "歌える！" },
+                        { type: "postback", label: "歌えない", data: `setup_skip:${index}`, displayText: "次へ" }
+                    ]
+                }
+            }]
+        });
+    }
+
     // --- 2. 子階層：曲の登録モード開始 ---
     if (text === "曲の登録") {
       const profile = await client.getProfile(userId);
@@ -786,7 +1718,6 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       return client.replyMessage({ replyToken: event.replyToken, messages: getRegMenu("【曲の登録】\n登録したい曲名や歌手名を入力して送ってね！") });
     }
 
-    // --- 3. 登録モード中の処理 ---
     // --- 3. 登録モード中の処理 ---
     if (userData?.isRegisteringSong) {
       if (text === "一曲消す") {
@@ -1007,6 +1938,13 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     if (text === "カラキンの説明") {
       return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "カラキンは歌本管理と選曲を助けるBotだよ！" }, ...getMainMenu()] });
     }
+  }
+  } finally {
+    // ★ 処理が終わったらロックを解除
+    // 通信の遅延などを考慮して、500ミリ秒（0.5秒）後に解除するとより安定します
+    setTimeout(() => {
+      activeLocks.delete(stateKey);
+    }, 500);
   }
 }
 
