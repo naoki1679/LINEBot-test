@@ -624,18 +624,16 @@
     {
       "groupId": "C5ca126157f286c8d67c6868ffb597663",
       "memberIds": [
-        "U1834e55575a534794e3baebfe5d82468",
         "U34284e7ea622bffcc925d1d84f8cff17",
         "Ud6394d4517cedf2d53be6482545bb47a",
         "U129d131de568026f6ab42fd2a0aef2ea"
       ],
       "memberNames": [
-        "市村直輝",
         "よしき",
         "西祐翔",
         "れん"
       ],
-      "isRegistering": false,
+      "isRegistering": true,
       "lastOrder": "👫 チームの順番：\n・ れん ＆ 市村直輝\n・ よしき ＆ 西祐翔",
       "lastTeams": [
         [
