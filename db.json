@@ -469,10 +469,16 @@
       "userId": "U02d473f9a55e9ea34639a92ead200ec2",
       "displayName": "森本悠仁",
       "mySongs": [
-        "デュエルペット / gaburyu"
+        "デュエルペット / gaburyu",
+        "アゲアゲアゲイン (feat. 初音ミク) / Mitchie M",
+        "アジアン / パスピエ",
+        "サウダージ / ポルノグラフィティ"
       ],
       "myArtists": [
-        "gaburyu"
+        "gaburyu",
+        "Mitchie M",
+        "パスピエ",
+        "ポルノグラフィティ"
       ],
       "isRegisteringSong": true
     },
@@ -511,6 +517,27 @@
         "スピッツ"
       ],
       "isRegisteringSong": false
+    },
+    {
+      "userId": "Uaed3e55f1cb850a05c8dfd64e3d79c68",
+      "displayName": "芦沢優介",
+      "mySongs": [],
+      "myArtists": [],
+      "isRegisteringSong": true
+    },
+    {
+      "userId": "Ud19bc786f8f07fbac2cb59ceb16b94c7",
+      "displayName": "よしかつ",
+      "mySongs": [],
+      "myArtists": [],
+      "isRegisteringSong": true
+    },
+    {
+      "userId": "U523982141433b3455969b38c2e74d7f8",
+      "displayName": "浦松",
+      "mySongs": [],
+      "myArtists": [],
+      "isRegisteringSong": true
     }
   ],
   "groups": [
@@ -673,17 +700,17 @@
       "groupId": "Cc8ca462c7ae0f08b9ef087c420ff76e8",
       "memberIds": [
         "Ud19bc786f8f07fbac2cb59ceb16b94c7",
-        "U1834e55575a534794e3baebfe5d82468",
-        "U34284e7ea622bffcc925d1d84f8cff17",
-        "Uaed3e55f1cb850a05c8dfd64e3d79c68"
+        "U02d473f9a55e9ea34639a92ead200ec2",
+        "Uaed3e55f1cb850a05c8dfd64e3d79c68",
+        "U523982141433b3455969b38c2e74d7f8"
       ],
       "memberNames": [
         "よしかつ",
-        "市村直輝",
-        "よしき",
-        "芦沢優介"
+        "森本悠仁",
+        "芦沢優介",
+        "浦松"
       ],
-      "isRegistering": false,
+      "isRegistering": true,
       "lastOrder": "👫 チームの順番：\n・ 芦沢優介 ＆ よしき\n・ 市村直輝 ＆ よしかつ",
       "lastTeams": [
         [
