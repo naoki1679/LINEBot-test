@@ -1555,6 +1555,34 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
 
       const usersInDb = db.data.users;
 
+      // ★【追加】マイリストが空のメンバーがいないか事前にチェック
+      const allTeamUserIds = teams.flat(); 
+      const emptyListUsers = allTeamUserIds
+        .map((id: string) => usersInDb.find((u: UserData) => u.userId === id))
+        .filter((u: UserData | undefined): u is UserData => {
+          // uが存在し、かつmySongsが0件の場合
+          return !!u && (!u.mySongs || u.mySongs.length === 0);
+        });
+
+      if (emptyListUsers.length > 0) {
+        // mapの引数 u にも型 (u: UserData) を指定し、? を外してスッキリさせる
+        const names = emptyListUsers.map((u: UserData) => u.displayName).join("さん、");
+        
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [{ 
+            type: "text", 
+            text: `⚠️ 提案ができないよ！\n\n${names}さんのマイリストが空っぽです。個人チャットの「簡易設定」などで曲を登録してから、もう一度提案してね！` 
+          },
+          {
+            type: "image",
+            // HTTPSの直リンクである必要があります
+            originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true", 
+            previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
+          },...getGroupMainMenu()]
+        });
+      }
+
       teams.forEach((teamIds: string[], index: number) => {
         // チーム全員のプロフィール、曲リスト、アーティストリストを取得
         const teamMembers = teamIds.map(id => {
