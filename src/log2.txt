@@ -62,248 +62,66 @@ async function searchSongs(query: string) {
 }
 
 // --- 3. メッセージ・ボタンテンプレート群 ---
-//　---グループ招待時メッセージ--
 function startMessages(): line.messagingApi.Message[] {
   return [
+    { type: "text", text: "カラキンだよ！歌う順番や曲を提案して、カラオケを盛り上げるよ！🎵" },
+    { type: "text", text: "⚠️カラキンを使うためには、メンバーみんなが”カラキン”を友だち登録していないといけないよ！！" },
     {
-      type: "flex",
-      altText: "はじめまして！カラキンです",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "🎤 KARA-KIN",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            // 1. 挨拶テキスト
-            {
-              type: "text",
-              text: "初めまして、カラキンだよ！\n歌う順番や曲を提案して、\nカラオケを盛り上げるよ！🎵",
-              wrap: true,
-              align: "center",
-              size: "md",
-              color: "#333333"
-            },
-            { type: "separator", margin: "lg" },
-            
-            // 2. 警告テキスト（赤文字で強調）
-            {
-              type: "text",
-              text: "⚠️ 重要なお知らせ",
-              weight: "bold",
-              color: "#FF6B6B",
-              size: "sm",
-              margin: "lg"
-            },
-            {
-              type: "text",
-              text: "メンバー全員が「カラキン」を友だち登録していないと正しく動きません！",
-              wrap: true,
-              size: "xs",
-              color: "#666666"
-            },
-            
-            // 3. 説明画像エリア（2枚を縦に並べる）
-            {
-              type: "box",
-              layout: "vertical",
-              margin: "lg",
-              spacing: "sm",
-              contents: [
-                {
-                  type: "image",
-                  url: "https://github.com/naoki1679/LINEBot-test/blob/main/participate.png?raw=true",
-                  size: "full",
-                  aspectMode: "cover",
-                  aspectRatio: "20:13", // 画像の比率に合わせて調整可
-                  action: {
-                    type: "uri",
-                    uri: "https://github.com/naoki1679/LINEBot-test/blob/main/participate.png?raw=true"
-                  }
-                },
-                {
-                  type: "image",
-                  url: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true",
-                  size: "full",
-                  aspectMode: "cover",
-                  aspectRatio: "20:13",
-                  action: {
-                    type: "uri",
-                    uri: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
-                  }
-                }
-              ]
-            },
-            
-            // 4. アクションボタン
-            { type: "separator", margin: "xl" },
-            {
-              type: "text",
-              text: "まずはここからスタート！",
-              size: "xs",
-              color: "#aaaaaa",
-              align: "center",
-              margin: "lg"
-            },
-            {
-              type: "button",
-              style: "primary",
-              color: "#1DB954",
-              height: "sm",
-              action: { type: "message", label: "⚙️ メンバー登録（必須）", text: "メンバー登録を開始" }
-            }
-          ]
-        }
-      }
-    }
+      type: "image",
+      // HTTPSの直リンクである必要があります
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/participate.png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/participate.png?raw=true"
+    },
+    {
+      type: "image",
+      // HTTPSの直リンクである必要があります
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
+    },
+    { type: "template", altText: "グループメニュー",
+      template: {
+        type: "buttons", text: "まずはカラオケに参加するメンバーの把握から始めるよ！！",
+        actions: [
+          { type: "message", label: "⚙️ メンバー登録（必須）", text: "メンバー登録を開始" }
+        ]
+      }}
   ];
 }
 
-//　---個チャ登録時用メッセージ---
 function getPrivateMenu(): line.messagingApi.Message[] {
   return [
     {
-      type: "flex",
-      altText: "初期設定メニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "🎤 カラキン",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        hero: {
-          type: "image",
-          url: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true",
-          size: "full",
-          aspectRatio: "20:13",
-          aspectMode: "cover",
-          action: {
-            type: "uri",
-            uri: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
-          }
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            {
-              type: "text",
-              text: "まずは簡易設定で\n歌える曲を追加しよう！",
-              wrap: true,
-              align: "center",
-              weight: "bold",
-              color: "#666666"
-            },
-            {
-              type: "button",
-              style: "primary",
-              color: "#1DB954",
-              height: "sm",
-              action: { type: "message", label: "🎵 簡易設定を始める", text: "簡易設定を始める" }
-            }
-          ]
-        }
+      type: "image",
+      // HTTPSの直リンクである必要があります
+      originalContentUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true", 
+      previewImageUrl: "https://github.com/naoki1679/LINEBot-test/blob/main/addSong.png?raw=true"
+    },
+    { type: "text", text: "まずは簡易設定で歌える曲を追加しよう" },
+    { type: "template", altText: "個人メニュー",
+      template: {
+        type: "buttons", text: "【個人メニュー】\n何をする？",
+        actions: [
+          { type: "message", label: "🎵 曲の簡易設定（初めての方は必須）", text: "簡易設定を始める" },
+        ]
       }
     }
   ];
 }
 
-//　---個チャ用メニュー画面---
 function getFullPrivateMenu(): line.messagingApi.Message[] {
   return [
-  {
-    type: "flex",
-    altText: "個人メニュー",
-    contents: {
-      type: "bubble",
-      size: "kilo",
-      header: {
-        type: "box",
-        layout: "vertical",
-        backgroundColor: "#1DB954", // ヘッダーだけ色を付けてブランド感を出す
-        paddingAll: "lg",
-        contents: [
-          {
-            type: "text",
-            text: "🎤 個人メニュー",
-            color: "#ffffff",
-            weight: "bold",
-            size: "xl",
-            align: "center"
-          }
-        ]
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        paddingAll: "lg",
-        spacing: "md", // 仕切り線の代わりに、ここでボタン同士の隙間を作る
-        contents: [
-          // 1. 曲の登録
-          {
-            type: "button",
-            style: "secondary", // 全てこのスタイルで統一
-            height: "sm",
-            action: { type: "message", label: "🎵 曲の登録", text: "曲の登録" }
-          },
-          // 2. マイリスト
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            action: { type: "message", label: "📋 マイリスト確認・編集", text: "マイリストの確認、編集" }
-          },
-          // 3. 履歴
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            action: { type: "message", label: "🕒 直近のグループ履歴", text: "カラキン履歴" }
-          },
-          // 4. 説明
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            action: { type: "message", label: "❓ カラキンの説明", text: "カラキンの説明" }
-          }
+    {type: "template", altText: "個人メニュー",
+      template: {
+        type: "buttons", text: "【個人メニュー】\n何をする？",
+        actions: [
+          { type: "message", label: "🎵 曲の登録", text: "曲の登録" },
+          { type: "message", label: "📋 マイリストの確認、編集", text: "マイリストの確認、編集" },
+          { type: "message", label: "直近のグループの情報確認", text: "カラキン履歴" },
+          { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
         ]
       }
     }
-  }];
+  ];
 }
 
 // --- 1. 定番10曲の定義 ---
@@ -520,79 +338,16 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         });
       }
 
-      //　---曲登録中メニュー---
       const getRegMenu = (infoText: string): line.messagingApi.Message[] => [
-        {
-          type: "flex",
-          altText: "登録中メニュー",
-          contents: {
-            type: "bubble",
-            size: "kilo",
-            header: {
-              type: "box",
-              layout: "vertical",
-              backgroundColor: "#1DB954",
-              paddingAll: "lg",
-              contents: [
-                {
-                  type: "text",
-                  text: "🎵 登録モード", // 登録中であることがわかるタイトル
-                  color: "#ffffff",
-                  weight: "bold",
-                  size: "xl",
-                  align: "center"
-                }
-              ]
-            },
-            body: {
-              type: "box",
-              layout: "vertical",
-              paddingAll: "lg",
-              spacing: "md",
-              contents: [
-                // 1. 通知メッセージ表示エリア（結果をここに表示）
-                {
-                  type: "text",
-                  text: infoText,
-                  wrap: true,
-                  align: "center",
-                  weight: "bold",
-                  color: "#333333",
-                  size: "md"
-                },
-                // 余白を開けてボタンエリアへ
-                {
-                  type: "box",
-                  layout: "vertical",
-                  margin: "xl",
-                  spacing: "sm",
-                  contents: [
-                    // 2. 一曲消す
-                    {
-                      type: "button",
-                      style: "secondary",
-                      height: "sm",
-                      action: { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" }
-                    },
-                    // 3. リスト確認
-                    {
-                      type: "button",
-                      style: "secondary",
-                      height: "sm",
-                      action: { type: "message", label: "📋 リスト確認", text: "リスト確認" }
-                    },
-                    // 4. 登録終了（区切りとして色を変えるか、統一するか。今回は統一）
-                    {
-                      type: "button",
-                      style: "primary", // 終了は重要なので緑（primary）にして目立たせる
-                      color: "#1DB954",
-                      height: "sm",
-                      action: { type: "message", label: "✅ 登録終了", text: "登録終了" }
-                    }
-                  ]
-                }
-              ]
-            }
+        { type: "text", text: infoText },
+        { type: "template", altText: "登録中メニュー",
+          template: {
+            type: "buttons", text: "リストの操作や確認はこちらから",
+            actions: [
+              { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+              { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+              { type: "message", label: "✅ 登録終了", text: "登録終了" },
+            ]
           }
         }
       ];
@@ -635,7 +390,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       } else {
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{ type: "text", text: "✨ お疲れ様！これで簡易設定は終わりだよ。" }, ...getFullPrivateMenu()]
+          messages: [{ type: "text", text: "✨ 全曲の確認が終わりました！設定完了です。" }, ...getFullPrivateMenu()]
         });
       }
     }
@@ -695,7 +450,7 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
             return client.replyMessage({
               replyToken: event.replyToken,
               messages: [
-                { type: "text", text: `⚠️「${target}」はすでに登録済みだったよ！\n\n✨ お疲れ様！これで簡易設定は終わりだよ。` },
+                { type: "text", text: `⚠️「${target}」はすでに登録済みだったよ！\n\n✨ 全10曲の確認が完了しました。お疲れ様でした！` },
                 ...getFullPrivateMenu()
               ]
             });
@@ -708,83 +463,16 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
           messages: [
             { type: "text", text: `⚠️「${target}」はすでにマイリストに入っているよ！` },
             {
-              type: "flex",
+              type: "template",
               altText: "登録中メニュー",
-              contents: {
-                type: "bubble",
-                size: "kilo",
-                header: {
-                  type: "box",
-                  layout: "vertical",
-                  backgroundColor: "#1DB954",
-                  paddingAll: "lg",
-                  contents: [
-                    {
-                      type: "text",
-                      text: "🎵 登録モード",
-                      color: "#ffffff",
-                      weight: "bold",
-                      size: "xl",
-                      align: "center"
-                    }
-                  ]
-                },
-                body: {
-                  type: "box",
-                  layout: "vertical",
-                  paddingAll: "lg",
-                  spacing: "md",
-                  contents: [
-                    // 1. 通知メッセージ表示エリア
-                    {
-                      type: "text",
-                      text: "続けて登録するか、操作を選んでね",
-                      wrap: true,
-                      align: "center",
-                      weight: "bold",
-                      color: "#333333",
-                      size: "md"
-                    },
-                    // 余白を開けてボタンエリアへ
-                    {
-                      type: "box",
-                      layout: "vertical",
-                      margin: "xl",
-                      spacing: "sm",
-                      contents: [
-                        // 1. 再検索
-                        {
-                          type: "button",
-                          style: "secondary",
-                          height: "sm",
-                          action: { type: "message", label: `🔍 ${artistName} で再検索`, text: artistName }
-                        },
-                        // 2. 一曲消す
-                        {
-                          type: "button",
-                          style: "secondary",
-                          height: "sm",
-                          action: { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" }
-                        },
-                        // 3. リスト確認
-                        {
-                          type: "button",
-                          style: "secondary",
-                          height: "sm",
-                          action: { type: "message", label: "📋 リスト確認", text: "リスト確認" }
-                        },
-                        // 4. 登録終了
-                        {
-                          type: "button",
-                          style: "primary",
-                          color: "#1DB954",
-                          height: "sm",
-                          action: { type: "message", label: "✅ 登録終了", text: "登録終了" }
-                        }
-                      ]
-                    }
-                  ]
-                }
+              template: {
+                type: "buttons",
+                text: "続けて登録するか、操作を選んでね",
+                actions: [
+                  { type: "message", label: "↩️ 一曲消す", text: "一曲消す" },
+                  { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+                  { type: "message", label: "✅ 登録終了", text: "登録終了" },
+                ]
               }
             }
           ]
@@ -843,83 +531,17 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
         messages: [
           { type: "text", text: `✅「${target}」を登録したよ！` },
           {
-            type: "flex",
+            type: "template",
             altText: "登録中メニュー",
-            contents: {
-              type: "bubble",
-              size: "kilo",
-              header: {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#1DB954",
-                paddingAll: "lg",
-                contents: [
-                  {
-                    type: "text",
-                    text: "🎵 登録モード",
-                    color: "#ffffff",
-                    weight: "bold",
-                    size: "xl",
-                    align: "center"
-                  }
-                ]
-              },
-              body: {
-                type: "box",
-                layout: "vertical",
-                paddingAll: "lg",
-                spacing: "md",
-                contents: [
-                  // 1. 通知メッセージ表示エリア
-                  {
-                    type: "text",
-                    text: "続けて登録するか、操作を選んでね。\nさらに検索したいときは、曲名や歌手名を入力して送ってね！",
-                    wrap: true,
-                    align: "center",
-                    weight: "bold",
-                    color: "#333333",
-                    size: "md"
-                  },
-                  // 余白を開けてボタンエリアへ
-                  {
-                    type: "box",
-                    layout: "vertical",
-                    margin: "xl",
-                    spacing: "sm",
-                    contents: [
-                      // 1. 再検索
-                      {
-                        type: "button",
-                        style: "secondary",
-                        height: "sm",
-                        action: { type: "message", label: `🔍 ${artistName} で再検索`, text: artistName }
-                      },
-                      // 2. 一曲消す
-                      {
-                        type: "button",
-                        style: "secondary",
-                        height: "sm",
-                        action: { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" }
-                      },
-                      // 3. リスト確認
-                      {
-                        type: "button",
-                        style: "secondary",
-                        height: "sm",
-                        action: { type: "message", label: "📋 リスト確認", text: "リスト確認" }
-                      },
-                      // 4. 登録終了
-                      {
-                        type: "button",
-                        style: "primary",
-                        color: "#1DB954",
-                        height: "sm",
-                        action: { type: "message", label: "✅ 登録終了", text: "登録終了" }
-                      }
-                    ]
-                  }
-                ]
-              }
+            template: {
+              type: "buttons",
+              text: "続けて登録するか、操作を選んでね",
+              actions: [
+                { type: "message", label: `🔍 ${artistName} で再検索`, text: artistName },
+                { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+                { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+                { type: "message", label: "✅ 登録終了", text: "登録終了" },
+              ]
             }
           }
         ]
@@ -927,60 +549,16 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     }
 
     const getMyListMenu = (): line.messagingApi.Message[] => [{
-      type: "flex",
+      type: "template",
       altText: "マイリスト管理メニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-        type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "📋 マイリスト管理",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            // 1. リスト確認ボタン
-            {
-            type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "👀 リストを確認する", text: "マイリスト確認" }
-            },
-            // 2. リスト編集ボタン
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "✂️ リストを編集する", text: "マイリスト編集" }
-            },
-            // セパレーター（区切り線）
-            { type: "separator", margin: "lg" },
-            // 3. 戻るボタン
-            {
-              type: "button",
-              style: "link", // 戻るボタンはリンクスタイルで控えめに
-              height: "sm",
-              margin: "md",
-              color: "#888888",
-              action: { type: "message", label: "🏠 メニューに戻る", text: "メニュー" }
-            }
-          ]
-        }
+      template: {
+        type: "buttons",
+        text: "マイリスト管理",
+        actions: [
+          { type: "message", label: "📋 リストを確認する", text: "マイリスト確認" },
+          { type: "message", label: "✂️ リストを編集する", text: "マイリスト編集" },
+          { type: "message", label: "🏠 戻る", text: "メニュー" }
+        ]
       }
     }];
 
@@ -1033,215 +611,43 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
   // ----------------------------------------
   if (isGroup) {
     const getGroupMainMenu = (): line.messagingApi.Message[] => [{
-      type: "flex",
-      altText: "グループメニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "🎤 グループメニュー",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            // 1. メンバー管理
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "⚙️ メンバー管理", text: "メンバー管理" }
-            },
-            // 2. 順番
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "🎤 順番の提案・確認", text: "順番の提案、確認" }
-            },
-            // 3. 共通曲
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "🎵 共通曲の提案", text: "共通曲の提案" }
-            },
-            // 4. 遊び方
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "🎮 遊び方の提案", text: "遊び方の提案" }
-            }
-          ]
-        }
+      type: "template", altText: "グループメニュー",
+      template: {
+        type: "buttons", text: "【グループメニュー】\nみんなで楽しもう！",
+        actions: [
+          { type: "message", label: "⚙️ メンバー管理", text: "メンバー管理" },
+          { type: "message", label: "🎤 順番の提案、確認", text: "順番の提案、確認" },
+          { type: "message", label: "🎵 共通曲の提案", text: "共通曲の提案" }, // 既存のロジックへ
+          { type: "message", label: "🎮 遊び方の提案", text: "遊び方の提案" }, // 既存のロジックへ
+        ]
       }
     }];
 
-    const getMemberAdminMenu = (info: string): line.messagingApi.Message[] => [{
-      type: "flex",
-      altText: "メンバー管理メニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "⚙️ MEMBER ADMIN",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            // 情報テキスト表示エリア
-            {
-              type: "text",
-              text: info,
-              wrap: true,
-              align: "center",
-              size: "md",
-              color: "#333333",
-              weight: "bold"
-            },
-            { type: "separator", margin: "lg" },
-            // ボタンエリア
-            {
-              type: "box",
-              layout: "vertical",
-              margin: "lg",
-              spacing: "sm",
-              contents: [
-                {
-                  type: "button",
-                  style: "primary", // 登録はメインアクションなので緑
-                  color: "#1DB954",
-                  height: "sm",
-                  action: { type: "message", label: "👥 メンバー登録(開始)", text: "メンバー登録を開始" }
-                },
-                {
-                  type: "button",
-                  style: "secondary",
-                  height: "sm",
-                  action: { type: "message", label: "👀 登録状況を確認", text: "登録状況を確認" }
-                },
-                {
-                  type: "button",
-                  style: "secondary",
-                  height: "sm",
-                  action: { type: "message", label: "♻️ メンバーリセット", text: "メンバーリセット" }
-                }
-              ]
-            },
-            // 戻るボタン
-            {
-              type: "button",
-              style: "link",
-              height: "sm",
-              margin: "md",
-              color: "#888888",
-              action: { type: "message", label: "↩️ メニューに戻る", text: "メニュー" }
-            }
+    const getMemberAdminMenu = (info: string): line.messagingApi.Message[] => [
+      { type: "text", text: info },
+      { type: "template", altText: "管理メニュー",
+        template: {
+          type: "buttons", text: "メンバー管理",
+          actions: [
+            { type: "message", label: "👥 登録（開始）", text: "メンバー登録を開始" },
+            { type: "message", label: "👀 メンバー確認", text: "登録状況を確認" },
+            { type: "message", label: "♻️ リセット", text: "メンバーリセット" },
+            { type: "message", label: "↩️ 戻る", text: "メニュー" },
           ]
         }
       }
-    }];
+    ];
 
     const getOrderMenu = (): line.messagingApi.Message[] => [{
-      type: "flex",
-      altText: "順番メニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "🎤 ORDER SELECT",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            {
-              type: "text",
-              text: "どんな形式で歌う？",
-              align: "center",
-              color: "#666666",
-              size: "sm"
-            },
-            // ソロ
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "👤 ひとりで歌う", text: "ソロ順番提案" }
-            },
-            // ペア
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "👫 ペアで歌う", text: "ペア順番提案" }
-            },
-            { type: "separator", margin: "lg" },
-            // 確認ボタン
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              margin: "lg",
-              action: { type: "message", label: "👀 今の順番を確認", text: "今の順番を確認" }
-            },
-            // 戻る
-            {
-              type: "button",
-              style: "link",
-              height: "sm",
-              color: "#888888",
-              action: { type: "message", label: "↩️ メニューに戻る", text: "メニュー" }
-            }
-          ]
-        }
+      type: "template", altText: "順番メニュー",
+      template: {
+        type: "buttons", text: "順番の提案・確認",
+        actions: [
+          { type: "message", label: "👤 ひとりで歌う", text: "ソロ順番提案" },
+          { type: "message", label: "👫 ペアで歌う", text: "ペア順番提案" },
+          { type: "message", label: "👀 今の順番を確認", text: "今の順番を確認" }, // ★追加
+          { type: "message", label: "↩️ 戻る", text: "メニュー" },
+        ]
       }
     }];
 
@@ -2465,199 +1871,44 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
   //---------------------------------
   else {
     const getMainMenu = (): line.messagingApi.Message[] => [{
-      type: "flex",
-      altText: "個人メニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954", // ヘッダーだけ色を付けてブランド感を出す
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "🎤 個人メニュー",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md", // 仕切り線の代わりに、ここでボタン同士の隙間を作る
-          contents: [
-            // 1. 曲の登録
-            {
-              type: "button",
-              style: "secondary", // 全てこのスタイルで統一
-              height: "sm",
-              action: { type: "message", label: "🎵 曲の登録", text: "曲の登録" }
-            },
-            // 2. マイリスト
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "📋 マイリスト確認・編集", text: "マイリストの確認、編集" }
-            },
-            // 3. 履歴
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "🕒 直近のグループ履歴", text: "カラキン履歴" }
-            },
-            // 4. 説明
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "❓ カラキンの説明", text: "カラキンの説明" }
-            }
-          ]
-        }
+      type: "template", altText: "個人メニュー",
+      template: {
+        type: "buttons", text: "【個人メニュー】\n何をする？",
+        actions: [
+          { type: "message", label: "🎵 曲の登録", text: "曲の登録" },
+          { type: "message", label: "📋 マイリストの確認、編集", text: "マイリストの確認、編集" },
+          { type: "message", label: "直近のグループの情報確認", text: "カラキン履歴" },
+          { type: "message", label: "カラキンの説明", text: "カラキンの説明" },
+        ]
       }
     }];
 
-    //　---曲登録中メニュー---
     const getRegMenu = (infoText: string): line.messagingApi.Message[] => [
-        {
-          type: "flex",
-          altText: "登録中メニュー",
-          contents: {
-            type: "bubble",
-            size: "kilo",
-            header: {
-              type: "box",
-              layout: "vertical",
-              backgroundColor: "#1DB954",
-              paddingAll: "lg",
-              contents: [
-                {
-                  type: "text",
-                  text: "🎵 登録モード", // 登録中であることがわかるタイトル
-                  color: "#ffffff",
-                  weight: "bold",
-                  size: "xl",
-                  align: "center"
-                }
-              ]
-            },
-            body: {
-              type: "box",
-              layout: "vertical",
-              paddingAll: "lg",
-              spacing: "md",
-              contents: [
-                // 1. 通知メッセージ表示エリア（結果をここに表示）
-                {
-                  type: "text",
-                  text: infoText,
-                  wrap: true,
-                  align: "center",
-                  weight: "bold",
-                  color: "#333333",
-                  size: "md"
-                },
-                // 余白を開けてボタンエリアへ
-                {
-                  type: "box",
-                  layout: "vertical",
-                  margin: "xl",
-                  spacing: "sm",
-                  contents: [
-                    // 2. 一曲消す
-                    {
-                      type: "button",
-                      style: "secondary",
-                      height: "sm",
-                      action: { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" }
-                    },
-                    // 3. リスト確認
-                    {
-                      type: "button",
-                      style: "secondary",
-                      height: "sm",
-                      action: { type: "message", label: "📋 リスト確認", text: "リスト確認" }
-                    },
-                    // 4. 登録終了（区切りとして色を変えるか、統一するか。今回は統一）
-                    {
-                      type: "button",
-                      style: "primary", // 終了は重要なので緑（primary）にして目立たせる
-                      color: "#1DB954",
-                      height: "sm",
-                      action: { type: "message", label: "✅ 登録終了", text: "登録終了" }
-                    }
-                  ]
-                }
-              ]
-            }
-          }
+      { type: "text", text: infoText },
+      { type: "template", altText: "登録中メニュー",
+        template: {
+          type: "buttons", text: "リストの操作や確認はこちらから",
+          actions: [
+            { type: "message", label: "↩️ 直前の一曲消す", text: "一曲消す" },
+            { type: "message", label: "📋 リスト確認", text: "リスト確認" },
+            { type: "message", label: "✅ 登録終了", text: "登録終了" },
+          ]
         }
-      ];
+      }
+    ];
 
     // マイリスト管理用メニュー（Flex または Buttons）
     const getMyListMenu = (): line.messagingApi.Message[] => [{
-      type: "flex",
+      type: "template",
       altText: "マイリスト管理メニュー",
-      contents: {
-        type: "bubble",
-        size: "kilo",
-        header: {
-        type: "box",
-          layout: "vertical",
-          backgroundColor: "#1DB954",
-          paddingAll: "lg",
-          contents: [
-            {
-              type: "text",
-              text: "📋 マイリスト管理",
-              color: "#ffffff",
-              weight: "bold",
-              size: "xl",
-              align: "center"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          paddingAll: "lg",
-          spacing: "md",
-          contents: [
-            // 1. リスト確認ボタン
-            {
-            type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "👀 リストを確認する", text: "マイリスト確認" }
-            },
-            // 2. リスト編集ボタン
-            {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              action: { type: "message", label: "✂️ リストを編集する", text: "マイリスト編集" }
-            },
-            // セパレーター（区切り線）
-            { type: "separator", margin: "lg" },
-            // 3. 戻るボタン
-            {
-              type: "button",
-              style: "link", // 戻るボタンはリンクスタイルで控えめに
-              height: "sm",
-              margin: "md",
-              color: "#888888",
-              action: { type: "message", label: "🏠 メニューに戻る", text: "メニュー" }
-            }
-          ]
-        }
+      template: {
+        type: "buttons",
+        text: "マイリスト管理",
+        actions: [
+          { type: "message", label: "📋 リストを確認する", text: "マイリスト確認" },
+          { type: "message", label: "✂️ リストを編集する", text: "マイリスト編集" },
+          { type: "message", label: "🏠 戻る", text: "メニュー" }
+        ]
       }
     }];
 
@@ -3028,7 +2279,6 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
       return client.replyMessage({
         replyToken: event.replyToken,
         messages: [
-          { type: "text", text: "カラキンはカラオケを盛り上げるためのBotだよ！" },
           {
             type: "flex",
             altText: "カラキン操作ガイド",

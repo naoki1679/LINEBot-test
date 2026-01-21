@@ -116,7 +116,7 @@
         "YOASOBI",
         "椎名林檎"
       ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "Ud6394d4517cedf2d53be6482545bb47a",
@@ -177,7 +177,7 @@
         "椎名林檎",
         "スピッツ"
       ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "Ua21a9c43dd8ad3ad8fc3a6554247e906",
@@ -225,7 +225,7 @@
         "りこ & おっさ",
         "MION & THE太地★櫻田"
       ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "U34284e7ea622bffcc925d1d84f8cff17",
@@ -304,11 +304,7 @@
         "怪獣の花唄 / Vaundy",
         "キセキ / GReeeeN",
         "残酷な天使のテーゼ / 高橋洋子",
-        "チェリー / スピッツ",
-        "マリーゴールド / あいみょん",
-        "アイドル / YOASOBI",
-        "糸 / 中島みゆき",
-        "丸ノ内サディスティック / 椎名林檎"
+        "チェリー / スピッツ"
       ],
       "isRegisteringSong": false,
       "myArtists": [
@@ -336,13 +332,8 @@
         "DOES",
         "GReeeeN",
         "高橋洋子",
-        "スピッツ",
-        "あいみょん",
-        "YOASOBI",
-        "中島みゆき",
-        "椎名林檎"
-      ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+        "スピッツ"
+      ]
     },
     {
       "userId": "Ufecf3a9bd31a7bab730dbfec5f13e81b",
@@ -404,32 +395,23 @@
       "userId": "U39cd8d1ae0dfd88b07e74feb4014132e",
       "displayName": "IsobeTaiyo",
       "mySongs": [
-        "新宝島 / サカナクション",
-        "アイネクライネ / 米津玄師"
+        "新宝島 / サカナクション"
       ],
       "isRegisteringSong": true,
       "myArtists": [
-        "サカナクション",
-        "米津玄師"
-      ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+        "サカナクション"
+      ]
     },
     {
       "userId": "Ub315d8ab1b54155880e7fe11ac9faf06",
       "displayName": "rjooske",
-      "mySongs": [],
-      "myArtists": [
-        "森山直太朗",
-        "あいみょん",
-        "MONGOL800",
-        "Vaundy",
-        "GReeeeN",
-        "高橋洋子",
-        "中島みゆき",
-        "スピッツ",
-        "THE 南無ズ"
+      "mySongs": [
+        "嗚呼 / 森山直太朗"
       ],
-      "isRegisteringSong": true
+      "myArtists": [
+        "森山直太朗"
+      ],
+      "isRegisteringSong": false
     },
     {
       "userId": "U7aa48ff83853c3904e0403d5c1097976",
@@ -559,192 +541,7 @@
         "スピッツ"
       ],
       "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "U58b2ae0411902a7ec64865f2c8bd2db2",
-      "displayName": "Yuki ODA",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "マリーゴールド / あいみょん",
-        "小さな恋のうた / MONGOL800",
-        "キセキ / GReeeeN",
-        "残酷な天使のテーゼ / 高橋洋子",
-        "アイドル / YOASOBI"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "あいみょん",
-        "MONGOL800",
-        "GReeeeN",
-        "高橋洋子",
-        "YOASOBI"
-      ],
-      "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "U64cf0c20a29134693654671a0b223d7c",
-      "displayName": "Tamao",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "マリーゴールド / あいみょん",
-        "小さな恋のうた / MONGOL800",
-        "怪獣の花唄 / Vaundy",
-        "キセキ / GReeeeN",
-        "残酷な天使のテーゼ / 高橋洋子",
-        "アイドル / YOASOBI",
-        "糸 / 中島みゆき",
-        "丸ノ内サディスティック / 椎名林檎",
-        "チェリー / スピッツ"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "あいみょん",
-        "MONGOL800",
-        "Vaundy",
-        "GReeeeN",
-        "高橋洋子",
-        "YOASOBI",
-        "中島みゆき",
-        "椎名林檎",
-        "スピッツ"
-      ],
-      "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "Udd9ecdd7e7e7c8d96cdaa68179146165",
-      "displayName": "ひらいだいき",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "マリーゴールド / あいみょん",
-        "小さな恋のうた / MONGOL800",
-        "怪獣の花唄 / Vaundy",
-        "キセキ / GReeeeN",
-        "残酷な天使のテーゼ / 高橋洋子",
-        "アイドル / YOASOBI",
-        "丸ノ内サディスティック / 椎名林檎",
-        "チェリー / スピッツ",
-        "新宝島 / サカナクション",
-        "ray / BUMP OF CHICKEN"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "あいみょん",
-        "MONGOL800",
-        "Vaundy",
-        "GReeeeN",
-        "高橋洋子",
-        "YOASOBI",
-        "椎名林檎",
-        "スピッツ",
-        "サカナクション",
-        "BUMP OF CHICKEN"
-      ],
-      "isRegisteringSong": true,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "U72efbb014735509bb98202d4a1703717",
-      "displayName": "きち",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "マリーゴールド / あいみょん",
-        "残酷な天使のテーゼ / 高橋洋子",
-        "アイドル / YOASOBI",
-        "唱 / Ado"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "あいみょん",
-        "高橋洋子",
-        "YOASOBI",
-        "Ado"
-      ],
-      "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "U99279ad2612d6f2351e049d592bda164",
-      "displayName": "MR",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "小さな恋のうた / MONGOL800",
-        "怪獣の花唄 / Vaundy",
-        "キセキ / GReeeeN",
-        "残酷な天使のテーゼ / 高橋洋子",
-        "丸ノ内サディスティック / 椎名林檎",
-        "チェリー / スピッツ"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "MONGOL800",
-        "Vaundy",
-        "GReeeeN",
-        "高橋洋子",
-        "椎名林檎",
-        "スピッツ"
-      ],
-      "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "U20950e8e7a88fda75b805b1f91dde505",
-      "displayName": "タカイ　ナツキ",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "マリーゴールド / あいみょん",
-        "小さな恋のうた / MONGOL800",
-        "怪獣の花唄 / Vaundy",
-        "ヒューマン / WANIMA"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "あいみょん",
-        "MONGOL800",
-        "Vaundy",
-        "WANIMA"
-      ],
-      "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "U6c2d40a33680da2e0a2400a65c049900",
-      "displayName": "まっすー",
-      "mySongs": [
-        "Lemon / 米津玄師",
-        "マリーゴールド / あいみょん",
-        "小さな恋のうた / MONGOL800",
-        "怪獣の花唄 / Vaundy",
-        "キセキ / GReeeeN",
-        "残酷な天使のテーゼ / 高橋洋子",
-        "アイドル / YOASOBI",
-        "チェリー / スピッツ"
-      ],
-      "myArtists": [
-        "米津玄師",
-        "あいみょん",
-        "MONGOL800",
-        "Vaundy",
-        "GReeeeN",
-        "高橋洋子",
-        "YOASOBI",
-        "スピッツ"
-      ],
-      "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
-    },
-    {
-      "userId": "Uf1db7f8a8fe5bd9cf00394df46346df3",
-      "displayName": "平岡真慈",
-      "mySongs": [
-        "残酷な天使のテーゼ / 高橋洋子"
-      ],
-      "myArtists": [
-        "高橋洋子"
-      ],
-      "isRegisteringSong": false
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     }
   ],
   "groups": [
@@ -941,68 +738,6 @@
         [
           "U1834e55575a534794e3baebfe5d82468",
           "U1ed5b3b97e657a13ae5908fbe3216545"
-        ]
-      ]
-    },
-    {
-      "groupId": "Cb9a4e818be816f81c19a50be24ed7b59",
-      "memberIds": [
-        "U39cd8d1ae0dfd88b07e74feb4014132e",
-        "U1834e55575a534794e3baebfe5d82468",
-        "U58b2ae0411902a7ec64865f2c8bd2db2",
-        "Ud6394d4517cedf2d53be6482545bb47a",
-        "U34284e7ea622bffcc925d1d84f8cff17",
-        "Ua21a9c43dd8ad3ad8fc3a6554247e906",
-        "U129d131de568026f6ab42fd2a0aef2ea",
-        "U64cf0c20a29134693654671a0b223d7c",
-        "U99279ad2612d6f2351e049d592bda164",
-        "U72efbb014735509bb98202d4a1703717",
-        "U20950e8e7a88fda75b805b1f91dde505",
-        "Udd9ecdd7e7e7c8d96cdaa68179146165",
-        "U6c2d40a33680da2e0a2400a65c049900"
-      ],
-      "memberNames": [
-        "IsobeTaiyo",
-        "市村直輝",
-        "Yuki ODA",
-        "西祐翔",
-        "よしき",
-        "河名 たすく",
-        "れん",
-        "Tamao",
-        "MR",
-        "きち",
-        "タカイ　ナツキ",
-        "ひらいだいき",
-        "まっすー"
-      ],
-      "isRegistering": false,
-      "lastOrder": "👫 チームの順番：\n1. タカイ　ナツキ ＆ IsobeTaiyo\n2. まっすー ＆ 市村直輝\n3. Yuki ODA ＆ ひらいだいき\n4. 西祐翔 ＆ よしき\n5. 河名 たすく ＆ れん\n6. きち ＆ Tamao ＆ MR (トリオ)",
-      "lastTeams": [
-        [
-          "U20950e8e7a88fda75b805b1f91dde505",
-          "U39cd8d1ae0dfd88b07e74feb4014132e"
-        ],
-        [
-          "U6c2d40a33680da2e0a2400a65c049900",
-          "U1834e55575a534794e3baebfe5d82468"
-        ],
-        [
-          "U58b2ae0411902a7ec64865f2c8bd2db2",
-          "Udd9ecdd7e7e7c8d96cdaa68179146165"
-        ],
-        [
-          "Ud6394d4517cedf2d53be6482545bb47a",
-          "U34284e7ea622bffcc925d1d84f8cff17"
-        ],
-        [
-          "Ua21a9c43dd8ad3ad8fc3a6554247e906",
-          "U129d131de568026f6ab42fd2a0aef2ea"
-        ],
-        [
-          "U72efbb014735509bb98202d4a1703717",
-          "U64cf0c20a29134693654671a0b223d7c",
-          "U99279ad2612d6f2351e049d592bda164"
         ]
       ]
     }
