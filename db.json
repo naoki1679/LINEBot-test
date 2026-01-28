@@ -56,7 +56,7 @@
         "サカナクション",
         "Vaundy"
       ],
-      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
+      "activeGroupId": "C447b9c5932bbd2e9f5129b148e41d05b"
     },
     {
       "userId": "U129d131de568026f6ab42fd2a0aef2ea",
@@ -121,7 +121,7 @@
         "椎名林檎",
         "RADWIMPS"
       ],
-      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
     },
     {
       "userId": "Ud6394d4517cedf2d53be6482545bb47a",
@@ -178,7 +178,7 @@
         "椎名林檎",
         "スピッツ"
       ],
-      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
     },
     {
       "userId": "Ua21a9c43dd8ad3ad8fc3a6554247e906",
@@ -222,7 +222,7 @@
         "椎名林檎",
         "スピッツ"
       ],
-      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
+      "activeGroupId": "C447b9c5932bbd2e9f5129b148e41d05b"
     },
     {
       "userId": "U34284e7ea622bffcc925d1d84f8cff17",
@@ -341,7 +341,7 @@
         "椎名林檎",
         "FLOW"
       ],
-      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
+      "activeGroupId": "C447b9c5932bbd2e9f5129b148e41d05b"
     },
     {
       "userId": "Ufecf3a9bd31a7bab730dbfec5f13e81b",
@@ -361,12 +361,17 @@
       "userId": "U8cb11a724cb284b7f443dd323b75f964",
       "displayName": "並木大星",
       "mySongs": [
-        "花束 / back number"
+        "花束 / back number",
+        "ハッピーエンド / back number",
+        "怪獣の花唄 / Vaundy",
+        "Tokimeki / Vaundy"
       ],
       "isRegisteringSong": false,
       "myArtists": [
-        "back number"
-      ]
+        "back number",
+        "Vaundy"
+      ],
+      "activeGroupId": "C447b9c5932bbd2e9f5129b148e41d05b"
     },
     {
       "userId": "Udba08c2f10abd19ed752970fc13ebd5b",
@@ -397,7 +402,8 @@
       "myArtists": [
         "YOASOBI",
         "サカナクション"
-      ]
+      ],
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
     },
     {
       "userId": "U39cd8d1ae0dfd88b07e74feb4014132e",
@@ -512,9 +518,25 @@
     {
       "userId": "Uaed3e55f1cb850a05c8dfd64e3d79c68",
       "displayName": "芦沢優介",
-      "mySongs": [],
-      "myArtists": [],
-      "isRegisteringSong": true
+      "mySongs": [
+        "小さな恋のうた / MONGOL800",
+        "怪獣の花唄 / Vaundy",
+        "キセキ / GReeeeN",
+        "残酷な天使のテーゼ / 高橋洋子",
+        "アイドル / YOASOBI",
+        "夜に駆ける / YOASOBI",
+        "UNDEAD / YOASOBI",
+        "群青 / YOASOBI"
+      ],
+      "myArtists": [
+        "MONGOL800",
+        "Vaundy",
+        "GReeeeN",
+        "高橋洋子",
+        "YOASOBI"
+      ],
+      "isRegisteringSong": true,
+      "activeGroupId": "C447b9c5932bbd2e9f5129b148e41d05b"
     },
     {
       "userId": "Ud19bc786f8f07fbac2cb59ceb16b94c7",
@@ -639,7 +661,8 @@
         "じょいふる / いきものがかり",
         "オトノナルホウヘ→ / Goose house",
         "RPG / SEKAI NO OWARI",
-        "眠り姫 / SEKAI NO OWARI"
+        "眠り姫 / SEKAI NO OWARI",
+        "ネイティブダンサー / サカナクション"
       ],
       "myArtists": [
         "米津玄師",
@@ -685,7 +708,7 @@
         "SEKAI NO OWARI"
       ],
       "isRegisteringSong": false,
-      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
     },
     {
       "userId": "U58b2ae0411902a7ec64865f2c8bd2db2",
@@ -789,7 +812,7 @@
         "Ado"
       ],
       "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
     },
     {
       "userId": "U99279ad2612d6f2351e049d592bda164",
@@ -871,6 +894,133 @@
         "高橋洋子"
       ],
       "isRegisteringSong": false
+    },
+    {
+      "userId": "U6e1d3b0bb59f3be653898972b4c0d9b8",
+      "displayName": "MARINA",
+      "mySongs": [
+        "Lemon / 米津玄師",
+        "マリーゴールド / あいみょん",
+        "小さな恋のうた / MONGOL800",
+        "怪獣の花唄 / Vaundy",
+        "キセキ / GReeeeN",
+        "残酷な天使のテーゼ / 高橋洋子",
+        "アイドル / YOASOBI",
+        "糸 / 中島みゆき"
+      ],
+      "myArtists": [
+        "米津玄師",
+        "あいみょん",
+        "MONGOL800",
+        "Vaundy",
+        "GReeeeN",
+        "高橋洋子",
+        "YOASOBI",
+        "中島みゆき"
+      ],
+      "isRegisteringSong": false,
+      "activeGroupId": "C337ac8a9b270da0887cd3f54959503d3"
+    },
+    {
+      "userId": "Uba15090eed2deff869e316de551443f3",
+      "displayName": "上田",
+      "mySongs": [
+        "Lemon / 米津玄師",
+        "マリーゴールド / あいみょん",
+        "小さな恋のうた / MONGOL800",
+        "キセキ / GReeeeN",
+        "残酷な天使のテーゼ / 高橋洋子",
+        "アイドル / YOASOBI",
+        "糸 / 中島みゆき",
+        "夜に駆ける / YOASOBI"
+      ],
+      "myArtists": [
+        "米津玄師",
+        "あいみょん",
+        "MONGOL800",
+        "GReeeeN",
+        "高橋洋子",
+        "YOASOBI",
+        "中島みゆき"
+      ],
+      "isRegisteringSong": false,
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
+    },
+    {
+      "userId": "U04ace6b0bf79b5183e501e1a6a891b06",
+      "displayName": "てっしょう",
+      "mySongs": [
+        "Lemon / 米津玄師",
+        "マリーゴールド / あいみょん",
+        "小さな恋のうた / MONGOL800",
+        "怪獣の花唄 / Vaundy",
+        "キセキ / GReeeeN",
+        "残酷な天使のテーゼ / 高橋洋子",
+        "丸ノ内サディスティック / 椎名林檎",
+        "チェリー / スピッツ"
+      ],
+      "myArtists": [
+        "米津玄師",
+        "あいみょん",
+        "MONGOL800",
+        "Vaundy",
+        "GReeeeN",
+        "高橋洋子",
+        "椎名林檎",
+        "スピッツ"
+      ],
+      "isRegisteringSong": false,
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
+    },
+    {
+      "userId": "U46873f94ed75a90ac4f519725a7d75ff",
+      "displayName": "そらと",
+      "mySongs": [
+        "Lemon / 米津玄師",
+        "マリーゴールド / あいみょん",
+        "小さな恋のうた / MONGOL800",
+        "怪獣の花唄 / Vaundy",
+        "キセキ / GReeeeN",
+        "残酷な天使のテーゼ / 高橋洋子",
+        "アイドル / YOASOBI",
+        "チェリー / スピッツ"
+      ],
+      "myArtists": [
+        "米津玄師",
+        "あいみょん",
+        "MONGOL800",
+        "Vaundy",
+        "GReeeeN",
+        "高橋洋子",
+        "YOASOBI",
+        "スピッツ"
+      ],
+      "isRegisteringSong": false,
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
+    },
+    {
+      "userId": "U9b54b2a1c7443355fbcde613afb9e336",
+      "displayName": "かわかみひなの",
+      "mySongs": [
+        "Lemon / 米津玄師",
+        "マリーゴールド / あいみょん",
+        "怪獣の花唄 / Vaundy",
+        "キセキ / GReeeeN",
+        "アイドル / YOASOBI",
+        "糸 / 中島みゆき",
+        "チェリー / スピッツ"
+      ],
+      "myArtists": [
+        "米津玄師",
+        "あいみょん",
+        "Vaundy",
+        "GReeeeN",
+        "YOASOBI",
+        "中島みゆき",
+        "スピッツ"
+      ],
+      "isRegisteringSong": true,
+      "activeGroupId": "C7c9330c5bfc320c1a2f8479e13f28d68"
     }
   ],
   "groups": [
@@ -1119,6 +1269,111 @@
           "U72efbb014735509bb98202d4a1703717",
           "U64cf0c20a29134693654671a0b223d7c",
           "U99279ad2612d6f2351e049d592bda164"
+        ]
+      ]
+    },
+    {
+      "groupId": "C337ac8a9b270da0887cd3f54959503d3",
+      "memberIds": [
+        "U34284e7ea622bffcc925d1d84f8cff17",
+        "Ud6394d4517cedf2d53be6482545bb47a",
+        "Ua3bb9fdc3af35465d19029ae91993d81",
+        "Ua21a9c43dd8ad3ad8fc3a6554247e906",
+        "U6e1d3b0bb59f3be653898972b4c0d9b8",
+        "U1834e55575a534794e3baebfe5d82468"
+      ],
+      "memberNames": [
+        "よしき",
+        "西祐翔",
+        "Atsushi",
+        "河名 たすく",
+        "MARINA",
+        "市村直輝"
+      ],
+      "isRegistering": false,
+      "lastOrder": "👫 チームの順番：\n1. 河名 たすく ＆ 市村直輝\n2. よしき ＆ MARINA\n3. 西祐翔 ＆ Atsushi",
+      "lastTeams": [
+        [
+          "Ua21a9c43dd8ad3ad8fc3a6554247e906",
+          "U1834e55575a534794e3baebfe5d82468"
+        ],
+        [
+          "U34284e7ea622bffcc925d1d84f8cff17",
+          "U6e1d3b0bb59f3be653898972b4c0d9b8"
+        ],
+        [
+          "Ud6394d4517cedf2d53be6482545bb47a",
+          "Ua3bb9fdc3af35465d19029ae91993d81"
+        ]
+      ]
+    },
+    {
+      "groupId": "C447b9c5932bbd2e9f5129b148e41d05b",
+      "memberIds": [
+        "U1834e55575a534794e3baebfe5d82468",
+        "Ua3bb9fdc3af35465d19029ae91993d81",
+        "U8cb11a724cb284b7f443dd323b75f964",
+        "Ua21a9c43dd8ad3ad8fc3a6554247e906",
+        "U34284e7ea622bffcc925d1d84f8cff17",
+        "Uaed3e55f1cb850a05c8dfd64e3d79c68"
+      ],
+      "memberNames": [
+        "市村直輝",
+        "Atsushi",
+        "並木大星",
+        "河名 たすく",
+        "よしき",
+        "芦沢優介"
+      ],
+      "isRegistering": false,
+      "lastOrder": "👫 チームの順番：\n1. 河名 たすく ＆ よしき\n2. Atsushi ＆ 市村直輝\n3. 並木大星 ＆ 芦沢優介",
+      "lastTeams": [
+        [
+          "Ua21a9c43dd8ad3ad8fc3a6554247e906",
+          "U34284e7ea622bffcc925d1d84f8cff17"
+        ],
+        [
+          "Ua3bb9fdc3af35465d19029ae91993d81",
+          "U1834e55575a534794e3baebfe5d82468"
+        ],
+        [
+          "U8cb11a724cb284b7f443dd323b75f964",
+          "Uaed3e55f1cb850a05c8dfd64e3d79c68"
+        ]
+      ]
+    },
+    {
+      "groupId": "C7c9330c5bfc320c1a2f8479e13f28d68",
+      "memberIds": [
+        "U72efbb014735509bb98202d4a1703717",
+        "U1834e55575a534794e3baebfe5d82468",
+        "U46873f94ed75a90ac4f519725a7d75ff",
+        "U04ace6b0bf79b5183e501e1a6a891b06",
+        "U9b54b2a1c7443355fbcde613afb9e336",
+        "Ud6394d4517cedf2d53be6482545bb47a"
+      ],
+      "memberNames": [
+        "きち",
+        "市村直輝",
+        "そらと",
+        "てっしょう",
+        "かわかみひなの",
+        "西祐翔"
+      ],
+      "isRegistering": true,
+      "lastOrder": "👫 チームの順番：\n1. 市村直輝 ＆ きち\n2. 西祐翔 ＆ てっしょう\n3. かわかみひなの ＆ そらと",
+      "lastTeams": [
+        [
+          "U1834e55575a534794e3baebfe5d82468",
+          "U72efbb014735509bb98202d4a1703717"
+        ],
+        [
+          "Ud6394d4517cedf2d53be6482545bb47a",
+          "U04ace6b0bf79b5183e501e1a6a891b06"
+        ],
+        [
+          "U9b54b2a1c7443355fbcde613afb9e336",
+          "U46873f94ed75a90ac4f519725a7d75ff"
         ]
       ]
     }
