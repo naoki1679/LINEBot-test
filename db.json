@@ -41,9 +41,11 @@
         "アイデンティティ / サカナクション",
         "怪獣の花唄 / Vaundy",
         "踊り子 / Vaundy",
-        "タイムパラドックス / Vaundy"
+        "タイムパラドックス / Vaundy",
+        "クリスマスソング / back number",
+        "ハッピーエンド / back number"
       ],
-      "isRegisteringSong": false,
+      "isRegisteringSong": true,
       "myArtists": [
         "Mr.Children",
         "SEKAI NO OWARI",
@@ -53,7 +55,8 @@
         "Mrs. GREEN APPLE",
         "サカナクション",
         "Vaundy"
-      ]
+      ],
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "U129d131de568026f6ab42fd2a0aef2ea",
@@ -95,7 +98,8 @@
         "糸 / 中島みゆき",
         "チェリー / スピッツ",
         "アイドル / YOASOBI",
-        "丸ノ内サディスティック / 椎名林檎"
+        "丸ノ内サディスティック / 椎名林檎",
+        "DARMA GRAND PRIX / RADWIMPS"
       ],
       "isRegisteringSong": false,
       "myArtists": [
@@ -114,9 +118,10 @@
         "中島みゆき",
         "スピッツ",
         "YOASOBI",
-        "椎名林檎"
+        "椎名林檎",
+        "RADWIMPS"
       ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "Ud6394d4517cedf2d53be6482545bb47a",
@@ -141,8 +146,6 @@
         "15の夜 / 尾崎豊",
         "I LOVE YOU / 尾崎豊",
         "DAN DAN心魅かれてく (ドラゴンボールGT) / 村上雄太",
-        "ちんちんかいちゃダメ / Unching Brothers Band",
-        "ちんちん(More Big Size Mix) / りこ & おっさ",
         "Lemon / 米津玄師",
         "マリーゴールド / あいみょん",
         "小さな恋のうた / MONGOL800",
@@ -165,8 +168,6 @@
         "girl in red",
         "尾崎豊",
         "村上雄太",
-        "Unching Brothers Band",
-        "りこ & おっさ",
         "米津玄師",
         "あいみょん",
         "MONGOL800",
@@ -197,35 +198,31 @@
         "アイデンティティ / サカナクション",
         "多分、風。 / サカナクション",
         "キセキ / GReeeeN",
-        "ちんこまんこに集まってくるごみは死ね / ヌミャーン",
         "Permission to Dance / BTS",
-        "あなたのチンコは何センチ? / Adult family",
-        "ちんこびびんび★びんらでぇん / ReVision of Sence",
-        "ちんこいらなくね? / 画鋲",
-        "ちんこポジション / 巨乳まんだら王国。",
-        "ぼくがおっぱい大きくしてあげる / でか美ちゃん",
-        "夜露死苦おっぱい! / 爆乳ヤンキー",
-        "ちんちん(More Big Size Mix) / りこ & おっさ",
-        "オー・チンチン / MION & THE太地★櫻田"
+        "マリーゴールド / あいみょん",
+        "小さな恋のうた / MONGOL800",
+        "残酷な天使のテーゼ / 高橋洋子",
+        "アイドル / YOASOBI",
+        "糸 / 中島みゆき",
+        "丸ノ内サディスティック / 椎名林檎",
+        "チェリー / スピッツ"
       ],
-      "isRegisteringSong": true,
+      "isRegisteringSong": false,
       "myArtists": [
         "Vaundy",
         "米津玄師",
         "サカナクション",
         "GReeeeN",
-        "ヌミャーン",
         "BTS",
-        "Adult family",
-        "ReVision of Sence",
-        "画鋲",
-        "巨乳まんだら王国。",
-        "でか美ちゃん",
-        "爆乳ヤンキー",
-        "りこ & おっさ",
-        "MION & THE太地★櫻田"
+        "あいみょん",
+        "MONGOL800",
+        "高橋洋子",
+        "YOASOBI",
+        "中島みゆき",
+        "椎名林檎",
+        "スピッツ"
       ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "U34284e7ea622bffcc925d1d84f8cff17",
@@ -308,7 +305,8 @@
         "マリーゴールド / あいみょん",
         "アイドル / YOASOBI",
         "糸 / 中島みゆき",
-        "丸ノ内サディスティック / 椎名林檎"
+        "丸ノ内サディスティック / 椎名林檎",
+        "GO!!! / FLOW"
       ],
       "isRegisteringSong": false,
       "myArtists": [
@@ -340,9 +338,10 @@
         "あいみょん",
         "YOASOBI",
         "中島みゆき",
-        "椎名林檎"
+        "椎名林檎",
+        "FLOW"
       ],
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "Ufecf3a9bd31a7bab730dbfec5f13e81b",
@@ -543,7 +542,104 @@
         "残酷な天使のテーゼ / 高橋洋子",
         "アイドル / YOASOBI",
         "糸 / 中島みゆき",
-        "丸ノ内サディスティック / 椎名林檎"
+        "丸ノ内サディスティック / 椎名林檎",
+        "チェリー / スピッツ",
+        "One Last Kiss / 宇多田ヒカル",
+        "ヒロイン / back number",
+        "怪獣 / サカナクション",
+        "ミュージック / サカナクション",
+        "アイデンティティ / サカナクション",
+        "新宝島 / サカナクション",
+        "Aoi / サカナクション",
+        "アルクアラウンド / サカナクション",
+        "『バッハの旋律を夜に聴いたせいです。』 / サカナクション",
+        "名前を呼ぶよ / SUPER BEAVER",
+        "らしさ / SUPER BEAVER",
+        "証明 / SUPER BEAVER",
+        "青い春 / SUPER BEAVER",
+        "IRIS OUT / 米津玄師",
+        "感電 / 米津玄師",
+        "KICK BACK / 米津玄師",
+        "灰色と青 ( + 菅田将暉 ) / 米津玄師 & 菅田 将暉",
+        "明日はきっといい日になる / 高橋優",
+        "Pretender / Official髭男dism",
+        "115万キロのフィルム / Official髭男dism",
+        "宿命 / Official髭男dism",
+        "ノーダウト / Official髭男dism",
+        "ホワイトノイズ / Official髭男dism",
+        "歌うたいのバラッド / 斉藤和義",
+        "表裏一体 / ゆず",
+        "夏色 / ゆず",
+        "REASON / ゆず",
+        "HANABI / Mr.Children",
+        "しるし / Mr.Children",
+        "365日 / Mr.Children",
+        "GIFT / Mr.Children",
+        "足音 ~Be Strong / Mr.Children",
+        "シーソーゲーム~勇敢な恋の歌~ / Mr.Children",
+        "逆夢 / King Gnu",
+        "一途 / King Gnu",
+        "Teenager Forever / King Gnu",
+        "BOY / King Gnu",
+        "踊り子 / Vaundy",
+        "裸の勇者 / Vaundy",
+        "タイムパラドックス / Vaundy",
+        "Happiness / 嵐",
+        "A・RA・SHI / 嵐",
+        "Monster / 嵐",
+        "白い恋人達 / 桑田佳祐",
+        "オレンジ / GReeeeN",
+        "weeeek / GReeeeN",
+        "イカロス / GReeeeN",
+        "アイノカタチ (feat. HIDE) / MISIA",
+        "愛をこめて花束を / Superfly",
+        "できっこないを やらなくちゃ / サンボマスター",
+        "シルエット / KANA-BOON",
+        "クリスマスソング / back number",
+        "高嶺の花子さん / back number",
+        "水平線 / back number",
+        "わたがし / back number",
+        "青いベンチ / サスケ",
+        "シグナル / WANIMA",
+        "ともに / WANIMA",
+        "GONG / WANIMA",
+        "アゲイン / WANIMA",
+        "ヒューマン / WANIMA",
+        "サウダージ / ポルノグラフィティ",
+        "メリッサ / ポルノグラフィティ",
+        "瞬く星の下で / ポルノグラフィティ",
+        "楓 / スピッツ",
+        "美しい鰭 / スピッツ",
+        "天体観測 / BUMP OF CHICKEN",
+        "ソラニン / ASIAN KUNG-FU GENERATION",
+        "迷子犬と雨のビート / ASIAN KUNG-FU GENERATION",
+        "桜流し / 宇多田ヒカル",
+        "Beautiful World (Remastered 2018) / 宇多田ヒカル",
+        "月を見ていた - Moongazing / 米津玄師",
+        "ピースサイン - Peace Sign / 米津玄師",
+        "がらくた - JUNK / 米津玄師",
+        "ノンフィクション / 平井 堅",
+        "POP STAR / 平井 堅",
+        "突破口 / SUPER BEAVER",
+        "グラデーション / SUPER BEAVER",
+        "ひたむき / SUPER BEAVER",
+        "予感 / SUPER BEAVER",
+        "BLOODY STREAM / Coda",
+        "ジョジョ~その血の運命 / 富永TOMMY弘明",
+        "KISSして / KOH+",
+        "家族になろうよ / 福山 雅治",
+        "道標 / 福山 雅治",
+        "聖域 / 福山 雅治",
+        "生きてる生きてく / 福山 雅治",
+        "全力少年 / スキマスイッチ",
+        "ボクノート / スキマスイッチ",
+        "ゴールデンタイムラバー / スキマスイッチ",
+        "雫 / スキマスイッチ",
+        "気まぐれロマンティック / いきものがかり",
+        "じょいふる / いきものがかり",
+        "オトノナルホウヘ→ / Goose house",
+        "RPG / SEKAI NO OWARI",
+        "眠り姫 / SEKAI NO OWARI"
       ],
       "myArtists": [
         "米津玄師",
@@ -556,10 +652,40 @@
         "中島みゆき",
         "椎名林檎",
         "スピッツ",
-        "サカナクション"
+        "サカナクション",
+        "宇多田ヒカル",
+        "back number",
+        "SUPER BEAVER",
+        "米津玄師 & 菅田 将暉",
+        "高橋優",
+        "Official髭男dism",
+        "斉藤和義",
+        "ゆず",
+        "Mr.Children",
+        "King Gnu",
+        "嵐",
+        "桑田佳祐",
+        "MISIA",
+        "Superfly",
+        "サンボマスター",
+        "KANA-BOON",
+        "サスケ",
+        "WANIMA",
+        "ポルノグラフィティ",
+        "BUMP OF CHICKEN",
+        "ASIAN KUNG-FU GENERATION",
+        "平井 堅",
+        "Coda",
+        "富永TOMMY弘明",
+        "KOH+",
+        "福山 雅治",
+        "スキマスイッチ",
+        "いきものがかり",
+        "Goose house",
+        "SEKAI NO OWARI"
       ],
       "isRegisteringSong": false,
-      "activeGroupId": "Cb9a4e818be816f81c19a50be24ed7b59"
+      "activeGroupId": "C5ca126157f286c8d67c6868ffb597663"
     },
     {
       "userId": "U58b2ae0411902a7ec64865f2c8bd2db2",
@@ -906,24 +1032,14 @@
     {
       "groupId": "C5ca126157f286c8d67c6868ffb597663",
       "memberIds": [
-        "Ud6394d4517cedf2d53be6482545bb47a",
-        "Ua21a9c43dd8ad3ad8fc3a6554247e906",
         "U1834e55575a534794e3baebfe5d82468"
       ],
       "memberNames": [
-        "西祐翔",
-        "河名 たすく",
         "市村直輝"
       ],
-      "isRegistering": true,
-      "lastOrder": "👫 チームの順番：\n1. 市村直輝 ＆ 河名 たすく ＆ 西祐翔 (トリオ)",
-      "lastTeams": [
-        [
-          "U1834e55575a534794e3baebfe5d82468",
-          "Ua21a9c43dd8ad3ad8fc3a6554247e906",
-          "Ud6394d4517cedf2d53be6482545bb47a"
-        ]
-      ]
+      "isRegistering": false,
+      "lastOrder": "🎤 ソロの順番：\n市村直輝",
+      "lastTeams": []
     },
     {
       "groupId": "Cd752fd063cf8ab8b9f97cd5a5dd0521d",

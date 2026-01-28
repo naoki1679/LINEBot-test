@@ -33,6 +33,7 @@ interface TempState {
   genreKey?: string;
   searchCache?: any[];
   lastQuery?: string;
+  rouletteCandidates?: string[]; // ★これを追加してください！
 }
 
 // --- 変更後：compareTargets（比較対象IDリスト）を追加 ---
@@ -41,6 +42,7 @@ interface TempState {
   searchCache?: any[];
   lastQuery?: string;
   compareTargets?: string[]; // ★追加：共通曲チェック用に選んだ人のIDを入れる
+  rouletteCandidates?: string[]; // ★これを追加してください！
 }
 
 type Data = { users: UserData[]; groups: GroupData[]; };
@@ -433,6 +435,202 @@ function calculateCommonSongs(db: any, teams: string[][]): string {
   return resultMessages.join("\n\n");
 }
 
+// --- ★ 分析＆カルーセル生成用関数（完全一致1枚・最大50件版） ---
+function generateTrendCarousel(db: any, memberIds: string[]): line.messagingApi.FlexMessage {
+  const users = db.data.users.filter((u: UserData) => memberIds.includes(u.userId));
+  const total = users.length;
+
+  // 1. 集計
+  const songCounts: Record<string, number> = {};
+  const artistCounts: Record<string, number> = {};
+
+  users.forEach((u: UserData) => {
+    u.mySongs.forEach((song) => { songCounts[song] = (songCounts[song] || 0) + 1; });
+    u.myArtists.forEach((artist) => { artistCounts[artist] = (artistCounts[artist] || 0) + 1; });
+  });
+
+  // 2. ソート
+  const getRanked = (counts: Record<string, number>) => {
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  };
+
+  const rankedSongs = getRanked(songCounts);
+  const rankedArtists = getRanked(artistCounts);
+
+  // 3. データ抽出（完全一致）
+  const perfectSongs = rankedSongs.filter(x => x.count === total).map(x => x.name);
+  const perfectArtists = rankedArtists.filter(x => x.count === total).map(x => x.name);
+
+  // 4. 混合リスト作成（トレンド用）
+  const createMixedList = (rankedItems: { name: string, count: number }[]) => {
+    const myUser = users.find((u: UserData) => u.userId === memberIds[0]);
+    const mySongSet = new Set(myUser?.mySongs || []);
+    const myArtistSet = new Set(myUser?.myArtists || []);
+
+    const candidates = rankedItems.filter(x => x.count < total);
+    
+    // A. 準一致
+    const trends = candidates
+      .filter(x => x.count > 1) 
+      .map(x => `${x.name}__${x.count}`);
+      
+    // B. シングル（自分除外）
+    const singles = candidates
+      .filter(x => x.count === 1) 
+      .filter(x => {
+          if (x.name.includes(" / ")) {
+              return !mySongSet.has(x.name); 
+          } else {
+              return !myArtistSet.has(x.name); 
+          }
+      })
+      .map(x => `${x.name}__1`);
+
+    let result = [...trends];
+    const MAX_LIMIT = 50; 
+    const PAGE_SIZE = 10;
+
+    // トレンドの方は「読みやすさ」重視で10件刻みにするロジックを維持
+    let targetCount = Math.ceil(result.length / PAGE_SIZE) * PAGE_SIZE;
+    if (targetCount < PAGE_SIZE) targetCount = PAGE_SIZE;
+    if (targetCount > MAX_LIMIT) targetCount = MAX_LIMIT;
+
+    if (result.length < targetCount) {
+        const needed = targetCount - result.length;
+        result = result.concat(singles.slice(0, needed));
+    } else {
+        result = result.slice(0, MAX_LIMIT);
+    }
+
+    let footer = "";
+    const totalTrendCount = trends.length;
+    if (totalTrendCount > 0) {
+        if (result.length > totalTrendCount) {
+            footer = `準一致${totalTrendCount}件 + 相手の曲`;
+        } else {
+            footer = `準一致: 全${totalTrendCount}件`;
+        }
+    } else if (result.length > 0) {
+        footer = "相手の持ち歌など";
+    } else {
+        result = ["データなし"];
+        footer = "すべて完全一致です";
+    }
+
+    return { displayList: result, footerText: footer };
+  };
+
+  const mixedSongs = createMixedList(rankedSongs);
+  const mixedArtists = createMixedList(rankedArtists);
+
+  // 5. バブル作成ヘルパー
+  const createStylishBubble = (title: string, color: string, items: string[], footerText: string, iconChar: string, isBoldMode: boolean = false): line.messagingApi.FlexBubble => {
+    const rowContents: line.messagingApi.FlexComponent[] = items.map(text => {
+        const parts = text.split("__");
+        const hasCount = parts.length === 2;
+        const name = hasCount ? parts[0] : text;
+        const count = hasCount ? parts[1] : "";
+
+        if (name === "データなし") {
+            return { type: "text", text: "（該当なし）", size: "xs", color: "#aaaaaa", align: "center", margin: "md" };
+        }
+
+        const isHighRank = (hasCount && count !== "1") || isBoldMode;
+        const nameColor = isHighRank ? "#333333" : "#555555";
+        const nameWeight = isHighRank ? "bold" : "regular";
+        const badgeBgColor = isHighRank ? "#f7b500" : "#eeeeee";
+        const badgeTextColor = isHighRank ? "#ffffff" : "#888888";
+
+        return {
+            type: "box", layout: "horizontal", spacing: "sm", margin: "sm", alignItems: "center",
+            contents: [
+                { type: "text", text: iconChar, size: "xs", flex: 0 },
+                { type: "text", text: name, size: "xs", color: nameColor, weight: nameWeight, wrap: true, flex: 1 },
+                ...(hasCount ? [{
+                    type: "box", layout: "vertical", backgroundColor: badgeBgColor, cornerRadius: "sm", paddingAll: "xs", flex: 0,
+                    contents: [{ type: "text", text: `${count}人登録中`, size: "xxs", color: badgeTextColor, weight: "bold" }]
+                } as line.messagingApi.FlexComponent] : [])
+            ]
+        };
+    });
+
+    return {
+      type: "bubble", size: "kilo",
+      header: {
+        type: "box", layout: "vertical", backgroundColor: color,
+        contents: [{ type: "text", text: title, color: "#ffffff", weight: "bold", align: "center" }]
+      },
+      body: { type: "box", layout: "vertical", spacing: "xs", contents: rowContents },
+      footer: {
+        type: "box", layout: "vertical",
+        contents: [{ type: "text", text: footerText, size: "xxs", color: "#aaaaaa", align: "center" }]
+      }
+    };
+  };
+
+  // 6. トレンド用：ページ分割するヘルパー（10件ごと）
+  const createPagedBubbles = (baseTitle: string, color: string, dataObj: { displayList: string[], footerText: string }, iconChar: string) => {
+      const items = dataObj.displayList;
+      const footer = dataObj.footerText;
+      if (items.length === 0 || (items.length === 1 && items[0] === "データなし")) {
+          const displayItems = items.length === 0 ? ["データなし"] : items;
+          return [createStylishBubble(baseTitle, color, displayItems, footer, iconChar, false)];
+      }
+      const pageSize = 10;
+      const chunks = [];
+      for (let i = 0; i < items.length; i += pageSize) {
+          chunks.push(items.slice(i, i + pageSize));
+      }
+      return chunks.map((chunk, index) => {
+          const pageNum = index + 1;
+          const totalPages = chunks.length;
+          const title = totalPages > 1 ? `${baseTitle} (${pageNum}/${totalPages})` : baseTitle;
+          return createStylishBubble(title, color, chunk, footer, iconChar, false);
+      });
+  };
+
+  // 7. ★ 完全一致用：ページ分割せず1枚にするヘルパー（最大50件）
+  const createPerfectBubbleOnePage = (title: string, color: string, items: string[], iconChar: string) => {
+      // LINEのFlex Bubbleの制限上、Bodyに入れられる要素は最大50個程度
+      // そのため、50件を超えたらカットする安全策を入れる
+      let displayItems = items;
+      let footer = "全員の十八番！";
+
+      if (items.length === 0) {
+          displayItems = ["データなし"];
+          footer = "もっと曲を登録しよう！";
+      } else if (items.length > 50) {
+          displayItems = items.slice(0, 50);
+          footer = `全員一致: 全${items.length}件 (TOP50)`;
+      }
+
+      // 最後の引数(isBoldMode)を true にして、1枚のバブルを作成して返す
+      return createStylishBubble(title, color, displayItems, footer, iconChar, true);
+  };
+
+  // 8. 最終的なカルーセル組み立て
+  return {
+    type: "flex",
+    altText: "分析結果",
+    contents: {
+      type: "carousel",
+      contents: [
+        // 曲（完全一致は1枚ドカンと表示）
+        createPerfectBubbleOnePage("🎵 全員の一致曲", "#1DB954", perfectSongs, "🎵"),
+        // 曲（トレンドはページ送りで見やすく）
+        ...createPagedBubbles("📈 隠れ人気曲", "#FF9900", mixedSongs, "🔸"),
+        
+        // 歌手（完全一致は1枚ドカンと表示）
+        createPerfectBubbleOnePage("🎤 全員の一致アーティスト", "#1DB954", perfectArtists, "🎤"),
+        // 歌手（トレンドはページ送りで見やすく）
+        ...createPagedBubbles("📊 隠れ人気アーティスト", "#333399", mixedArtists, "🔹")
+      ]
+    }
+  };
+}
+
 function songDecisionButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "決定", template: { type: "buttons", text: "どうする？", actions: [{ type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "候補を出す", text: "候補を出す" }] } }]; }
 function songAfterCandidateButtons(): line.messagingApi.Message[] { return [{ type: "template", altText: "候補", template: { type: "buttons", text: "どうかな？", actions: [{ type: "message", label: "もう一度候補", text: "候補を出す" }, { type: "message", label: "1曲に決める", text: "1曲に決める" }, { type: "message", label: "決まった", text: "決まった" }] } }]; }
 function genreButtons1(): line.messagingApi.Message[] { return [{ type: "template", altText: "G1", template: { type: "buttons", text: "どのジャンルにする？", actions: [{ type: "message", label: "JPOP", text: "ジャンル：JPOP" }, { type: "message", label: "ロック", text: "ジャンル：ロック" }, { type: "message", label: "アニメ", text: "ジャンル：アニメ" }, { type: "message", label: "他...", text: "ジャンル選択(他)" }] } }]; }
@@ -503,127 +701,126 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
     const userId = event.source.userId!;
     let songData: string = event.postback.data;
     const userData = db.data.users.find((u: UserData) => u.userId === userId);
+    const data = event.postback.data;
+
 
     // ★★★ 新機能：共通曲チェックの処理（ここに追加！） ★★★
-      
 
-      // 1. メンバー選択処理（個別トグル ＆ 全員一括）
-      if (songData.startsWith("toggle_compare:") || songData === "toggle_all") {
-          const activeGroup = db.data.groups.find((g: GroupData) => g.groupId === userData?.activeGroupId);
-          if (!activeGroup) return; 
+    // 1. メンバー選択処理（個別トグル ＆ 全員一括）
+    if (songData.startsWith("toggle_compare:") || songData === "toggle_all") {
+      const activeGroup = db.data.groups.find((g: GroupData) => g.groupId === userData?.activeGroupId);
+      if (!activeGroup) return; 
 
-          // 自分以外のターゲットID一覧
-          const targetIds = activeGroup.memberIds.filter((id: string) => id !== userId);
-          if (!currentState.compareTargets) currentState.compareTargets = [];
+      // 自分以外のターゲットID一覧
+      const targetIds = activeGroup.memberIds.filter((id: string) => id !== userId);
+      if (!currentState.compareTargets) currentState.compareTargets = [];
 
-          // --- A. 全員選択/解除のロジック ---
-          if (songData === "toggle_all") {
-              // 「全員」がすでに含まれているかチェック
-              // ★★★ 修正箇所：(id: string) と型を明記 ★★★
-              const isAllSelected = targetIds.every((id: string) => currentState.compareTargets!.includes(id));
+      // --- A. 全員選択/解除のロジック ---//
+      if (songData === "toggle_all") {
+        // 「全員」がすでに含まれているかチェック
+        // ★★★ 修正箇所：(id: string) と型を明記 ★★★
+        const isAllSelected = targetIds.every((id: string) => currentState.compareTargets!.includes(id));
               
-              if (isAllSelected) {
-                  // すでに全員選択済みなら → 全解除
-                  currentState.compareTargets = [];
-              } else {
-                  // まだ全員ではないなら → 全員追加
-                  currentState.compareTargets = [...targetIds];
-              }
-          } 
-          // --- B. 個別選択/解除のロジック ---
-          else {
-              const targetId = songData.split(":")[1];
-              const idx = currentState.compareTargets.indexOf(targetId);
-              if (idx >= 0) currentState.compareTargets.splice(idx, 1);
-              else currentState.compareTargets.push(targetId);
-          }
-
-          // --- 共通：再描画ロジック ---
-          
-          // 「全員選択されているか」を再確認（ボタンの見た目用）
-          // ★★★ 修正箇所：ここも (id: string) と型を明記 ★★★
-          const isAllSelectedNow = targetIds.length > 0 && targetIds.every((id: string) => currentState.compareTargets!.includes(id));
-
-          // ボタンの行を作成（2列表示）
-          const rows: any[] = [];
-          for (let i = 0; i < targetIds.length; i += 2) {
-              const rowContents = [];
-              
-              // 左
-              const id1 = targetIds[i];
-              const name1 = activeGroup.memberNames[activeGroup.memberIds.indexOf(id1)] || "不明";
-              const isSelected1 = currentState.compareTargets.includes(id1);
-              rowContents.push({
-                  type: "button", 
-                  style: isSelected1 ? "primary" : "secondary", 
-                  color: isSelected1 ? "#1DB954" : undefined,   
-                  height: "sm", flex: 1, margin: "sm",
-                  action: { type: "postback", label: isSelected1 ? `✅ ${name1}` : name1, data: `toggle_compare:${id1}`, displayText: `${name1}さんを${isSelected1 ? "解除" : "選択"}` }
-              });
-
-              // 右
-              if (i + 1 < targetIds.length) {
-                  const id2 = targetIds[i + 1];
-                  const name2 = activeGroup.memberNames[activeGroup.memberIds.indexOf(id2)] || "不明";
-                  const isSelected2 = currentState.compareTargets.includes(id2);
-                  rowContents.push({
-                      type: "button", 
-                      style: isSelected2 ? "primary" : "secondary", 
-                      color: isSelected2 ? "#1DB954" : undefined,
-                      height: "sm", flex: 1, margin: "sm",
-                      action: { type: "postback", label: isSelected2 ? `✅ ${name2}` : name2, data: `toggle_compare:${id2}`, displayText: `${name2}さんを${isSelected2 ? "解除" : "選択"}` }
-                  });
-              } else {
-                  rowContents.push({ type: "spacer", size: "sm" });
-              }
-              rows.push({ type: "box", layout: "horizontal", spacing: "md", contents: rowContents });
-          }
-
-          const count = currentState.compareTargets.length;
-
-          return client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [{
-                type: "flex",
-                altText: "メンバー選択中",
-                contents: {
-                  type: "bubble",
-                  body: {
-                    type: "box", layout: "vertical",
-                    contents: [
-                      { type: "text", text: `🎵 比較相手を選択中 (${count}人)`, weight: "bold", size: "sm", color: "#1DB954", align: "center" },
-                      { type: "separator", margin: "md" },
-                      
-                      // ★ 再描画時の全員選択ボタン（状態によって見た目を変える）
-                      {
-                        type: "button",
-                        style: isAllSelectedNow ? "secondary" : "primary", // 全選択済みならグレー、まだなら黒
-                        color: isAllSelectedNow ? "#aaaaaa" : "#333333",
-                        height: "sm",
-                        margin: "lg",
-                        action: { 
-                            type: "postback", 
-                            label: isAllSelectedNow ? "❌ 全員解除" : "✅ 全員を選択", 
-                            data: "toggle_all",
-                            displayText: isAllSelectedNow ? "全員解除！" : "全員選択！"
-                        }
-                      },
-
-                      { type: "box", layout: "vertical", margin: "md", spacing: "sm", contents: rows }
-                    ]
-                  },
-                  footer: {
-                    type: "box", layout: "vertical", spacing: "sm",
-                    contents: [
-                      { type: "button", style: "primary", color: "#1DB954", height: "sm", action: { type: "postback", label: "決定", data: "exec_compare", displayText: "共通曲を計算！" } }
-                    ]
-                  }
-                }
-              }]
-          });
+        if (isAllSelected) {
+          // すでに全員選択済みなら → 全解除
+          currentState.compareTargets = [];
+        } else {
+          // まだ全員ではないなら → 全員追加
+          currentState.compareTargets = [...targetIds];
+        }
+      } 
+      // --- B. 個別選択/解除のロジック ---
+      else {
+        const targetId = songData.split(":")[1];
+        const idx = currentState.compareTargets.indexOf(targetId);
+        if (idx >= 0) currentState.compareTargets.splice(idx, 1);
+        else currentState.compareTargets.push(targetId);
       }
 
-      // 2. 計算実行処理 【リセット＆全員選択ボタン付き再表示版】
+      // --- 共通：再描画ロジック ---
+          
+      // 「全員選択されているか」を再確認（ボタンの見た目用）
+      // ★★★ 修正箇所：ここも (id: string) と型を明記 ★★★
+      const isAllSelectedNow = targetIds.length > 0 && targetIds.every((id: string) => currentState.compareTargets!.includes(id));
+
+      // ボタンの行を作成（2列表示）
+      const rows: any[] = [];
+      for (let i = 0; i < targetIds.length; i += 2) {
+        const rowContents = [];
+              
+        // 左
+        const id1 = targetIds[i];
+        const name1 = activeGroup.memberNames[activeGroup.memberIds.indexOf(id1)] || "不明";
+        const isSelected1 = currentState.compareTargets.includes(id1);
+        rowContents.push({
+          type: "button", 
+          style: isSelected1 ? "primary" : "secondary", 
+          color: isSelected1 ? "#1DB954" : undefined,   
+          height: "sm", flex: 1, margin: "sm",
+          action: { type: "postback", label: isSelected1 ? `✅ ${name1}` : name1, data: `toggle_compare:${id1}`, displayText: `${name1}さんを${isSelected1 ? "解除" : "選択"}` }
+        });
+
+        // 右
+        if (i + 1 < targetIds.length) {
+          const id2 = targetIds[i + 1];
+          const name2 = activeGroup.memberNames[activeGroup.memberIds.indexOf(id2)] || "不明";
+          const isSelected2 = currentState.compareTargets.includes(id2);
+          rowContents.push({
+            type: "button", 
+            style: isSelected2 ? "primary" : "secondary", 
+            color: isSelected2 ? "#1DB954" : undefined,
+            height: "sm", flex: 1, margin: "sm",
+            action: { type: "postback", label: isSelected2 ? `✅ ${name2}` : name2, data: `toggle_compare:${id2}`, displayText: `${name2}さんを${isSelected2 ? "解除" : "選択"}` }
+          });
+        } else {
+          rowContents.push({ type: "spacer", size: "sm" });
+        }
+        rows.push({ type: "box", layout: "horizontal", spacing: "md", contents: rowContents });
+      }
+
+      const count = currentState.compareTargets.length;
+
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: "flex",
+          altText: "メンバー選択中",
+          contents: {
+            type: "bubble",
+            body: {
+              type: "box", layout: "vertical",
+              contents: [
+                { type: "text", text: `🎵 比較相手を選択中 (${count}人)`, weight: "bold", size: "sm", color: "#1DB954", align: "center" },
+                { type: "separator", margin: "md" },                     
+                // ★ 再描画時の全員選択ボタン（状態によって見た目を変える）
+                {
+                  type: "button",
+                  style: isAllSelectedNow ? "secondary" : "primary", // 全選択済みならグレー、まだなら黒
+                  color: isAllSelectedNow ? "#aaaaaa" : "#333333",
+                  height: "sm",
+                  margin: "lg",
+                  action: { 
+                    type: "postback", 
+                    label: isAllSelectedNow ? "❌ 全員解除" : "✅ 全員を選択", 
+                    data: "toggle_all",
+                    displayText: isAllSelectedNow ? "全員解除！" : "全員選択！"
+                  }
+                },
+                { type: "box", layout: "vertical", margin: "md", spacing: "sm", contents: rows }
+              ]
+            },
+            footer: {
+              type: "box", layout: "vertical", spacing: "sm",
+              contents: [
+                { type: "button", style: "primary", color: "#1DB954", height: "sm", action: { type: "postback", label: "決定", data: "exec_compare", displayText: "共通曲を計算！" } }
+              ]
+            }
+          }
+        }]
+      });
+    }
+
+    // 2. 計算実行処理 【統合版】
       if (songData === "exec_compare") {
           const targets = currentState.compareTargets || [];
           if (targets.length === 0) {
@@ -631,23 +828,20 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
           }
           
           const compareGroupIds = [userId, ...targets];
-          const rawResult = calculateCommonSongs(db, [compareGroupIds]);
+          
+          // ① 1つのFlexMessageを受け取る
+          const trendFlex = generateTrendCarousel(db, compareGroupIds);
 
-          // 2. ★ここで選択をリセット！
-          currentState.compareTargets = [];
+          currentState.compareTargets = []; 
 
-          // 3. 次の選択メニューを作成
           const activeGroup = db.data.groups.find((g: GroupData) => g.groupId === userData?.activeGroupId);
           if (!activeGroup) return; 
 
           const targetIds = activeGroup.memberIds.filter((id: string) => id !== userId);
           const rows: any[] = [];
           
-          // メンバーボタンの再生成（リセット済みなので色は全てグレー）
           for (let i = 0; i < targetIds.length; i += 2) {
               const rowContents = [];
-              
-              // 左
               const id1 = targetIds[i];
               const name1 = activeGroup.memberNames[activeGroup.memberIds.indexOf(id1)] || "不明";
               rowContents.push({
@@ -655,7 +849,6 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                   action: { type: "postback", label: name1, data: `toggle_compare:${id1}`, displayText: `${name1}さんを選択` }
               });
 
-              // 右
               if (i + 1 < targetIds.length) {
                   const id2 = targetIds[i + 1];
                   const name2 = activeGroup.memberNames[activeGroup.memberIds.indexOf(id2)] || "不明";
@@ -669,35 +862,21 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
               rows.push({ type: "box", layout: "horizontal", spacing: "md", contents: rowContents });
           }
 
-          // 4. メッセージ送信
+          // ② メッセージ送信
           return client.replyMessage({
               replyToken: event.replyToken,
               messages: [
-                  // 1通目：診断結果
-                  {
-                      type: "flex",
-                      altText: "共通曲の結果",
-                      contents: {
-                          type: "bubble",
-                          size: "kilo",
-                          header: {
-                              type: "box", layout: "vertical", backgroundColor: "#333333",
-                              contents: [{ type: "text", text: "✨ 診断結果", color: "#ffffff", weight: "bold", align: "center" }]
-                          },
-                          body: {
-                              type: "box", layout: "vertical", paddingAll: "lg",
-                              contents: [{ type: "text", text: rawResult, wrap: true, size: "md", color: "#333333" }]
-                          }
-                      }
-                  },
-                  // 2通目：次の選択メニュー（全員選択ボタンを追加！）
+                  // ★★★ 変更点：配列ではないので ... を消す ★★★
+                  trendFlex,
+                  
+                  // 続けて比較メニュー
                   {
                     type: "flex",
                     altText: "続けて比較",
                     contents: {
                       type: "bubble",
                       header: {
-                        type: "box", layout: "vertical", backgroundColor: "#1DB954",
+                        type: "box", layout: "vertical", backgroundColor: "#333333",
                         contents: [{ type: "text", text: "🔄 続けて誰と比べる？", color: "#ffffff", weight: "bold", align: "center" }]
                       },
                       body: {
@@ -705,17 +884,10 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                         contents: [
                           { type: "text", text: "選択をリセットしたよ！\nまた比較したい人を選んでね。", wrap: true, size: "sm", color: "#666666" },
                           { type: "separator", margin: "md" },
-                          
-                          // ★追加：全員選択ボタン（リセット直後なので必ず「選択」状態）
                           {
-                            type: "button",
-                            style: "primary",
-                            color: "#333333",
-                            height: "sm",
-                            margin: "lg",
+                            type: "button", style: "primary", color: "#333333", height: "sm", margin: "lg",
                             action: { type: "postback", label: "✅ 全員を選択", data: "toggle_all", displayText: "全員を選択！" }
                           },
-
                           { type: "box", layout: "vertical", margin: "md", spacing: "sm", contents: rows }
                         ]
                       },
@@ -728,25 +900,6 @@ async function handleEvent(client: line.messagingApi.MessagingApiClient, event: 
                       }
                     }
                   }
-              ]
-          });
-      }
-
-      // 2. 計算実行処理
-      if (songData === "exec_compare") {
-          const targets = currentState.compareTargets || [];
-          if (targets.length === 0) {
-               return client.replyMessage({ replyToken: event.replyToken, messages: [{ type: "text", text: "誰も選んでないよ！誰か選んでね。" }] });
-          }
-          
-          const compareGroupIds = [userId, ...targets];
-          const resultText = calculateCommonSongs(db, [compareGroupIds]);
-
-          return client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [
-                  { type: "text", text: resultText },
-                  { type: "text", text: "続けて他の人と比べるなら、「履歴：共通曲確認」を押してね。" }
               ]
           });
       }
